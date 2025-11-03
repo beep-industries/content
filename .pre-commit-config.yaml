@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/beep-industries/actions
-  rev: HEAD
+  rev: 0.0.2
   hooks:
     - id: fmt
     - id: cargo-check
