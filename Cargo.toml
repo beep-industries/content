@@ -1,0 +1,9 @@
+[package]
+name = "content"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dev-dependencies]
+insta = { version = "1.43.2", features = ["yaml"] }
