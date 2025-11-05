@@ -1,0 +1,32 @@
+#!/bin/bash
+
+CONTAINER_ID=$(podman container list -a --format "{{.ID}} {{.Image}}" | grep "dxflrs/garage" | tr " " "," | sed 's/,.*//g')
+
+NODE_ID=$(podman exec -it $CONTAINER_ID /garage node id)
+NODE_ID="${NODE_ID%%@*}"
+
+
+CLUSTER_LAYOUT=$(podman exec -it $CONTAINER_ID /garage layout show | grep "Current cluster layout version: 0")
+
+if [ "$CLUSTER_LAYOUT" != "" ]; then
+		podman exec -it $CONTAINER_ID /garage layout assign -z dc1 -c 1G $NODE_ID > /dev/null
+		podman exec -it $CONTAINER_ID /garage layout apply --version 1 > /dev/null
+		echo "Created layout for cluster"
+fi
+
+IS_BUCKET_PRESENT=$(podman exec -it $CONTAINER_ID /garage bucket list | grep "beep")
+if [ "$IS_BUCKET_PRESENT" == "" ]; then
+	podman exec -it $CONTAINER_ID /garage bucket create beep > /dev/null
+	echo "Created bucket beep"
+fi
+
+IS_KEY_PRESENT=$(podman exec -it $CONTAINER_ID /garage key list | grep "beep_admin")
+if [ "$IS_KEY_PRESENT" == "" ]; then
+		KEY_INFOS=$(podman exec -it $CONTAINER_ID /garage key create beep_admin)
+		KEY_ID=$(echo "$KEY_INFOS" | grep "Key ID" | cut -d ":" -f 2 | tr -d " ")
+		SECRET_KEY=$(echo "$KEY_INFOS" | grep "Secret key" | cut -d ":" -f 2 | tr -d " ")
+		podman exec -it $CONTAINER_ID /garage bucket allow --read --write --owner beep --key beep_admin > /dev/null
+		echo "PLEASE DON'T LOSE THESE CREDENTIALS"
+		echo "Key ID: $KEY_ID"
+		echo "Secret key: $SECRET_KEY"
+fi

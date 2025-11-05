@@ -1,0 +1,9 @@
+version: "3"
+services:
+  garage:
+    image: docker.io/dxflrs/garage:v2.1.0
+    ports:
+      - "3900:3900"
+    restart: unless-stopped
+    volumes:
+      - ./dev/garage.toml:/etc/garage.toml
