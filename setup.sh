@@ -1,10 +1,22 @@
 #!/bin/bash
 
+IS_THERE_DOCKER=$(which docker | grep "not found" | xargs)
+IS_THERE_PODMAN=$(which podman | grep "not found" | xargs)
+
+if [ "$IS_THERE_DOCKER" != "" ] || [ "$IS_THERE_PODMAN" != "" ]; then
+		echo "You need to install docker or podman"
+		exit 1
+fi
+if [ "$IS_THERE_PODMAN" != "" ] && [ "$IS_THERE_DOCKER" == "" ]; then
+		echo "Aliasing docker"
+		alias podman=docker
+fi
+
+
 CONTAINER_ID=$(podman container list -a --format "{{.ID}} {{.Image}}" | grep "dxflrs/garage" | tr " " "," | sed 's/,.*//g')
 
 NODE_ID=$(podman exec -it $CONTAINER_ID /garage node id)
 NODE_ID="${NODE_ID%%@*}"
-
 
 CLUSTER_LAYOUT=$(podman exec -it $CONTAINER_ID /garage layout show | grep "Current cluster layout version: 0")
 
