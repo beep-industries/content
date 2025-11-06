@@ -3,6 +3,7 @@ use axum::{
     http::{HeaderValue, Method, header::InvalidHeaderValue},
     routing::get,
 };
+use thiserror::Error;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 
@@ -18,8 +19,7 @@ pub async fn serve(config: Config) -> Result<(), HttpInfrastructureError> {
         .map_err(HttpInfrastructureError::AxumServe)
 }
 
-fn default_cors_layer(origins: &Vec<String>) -> Result<CorsLayer, HttpInfrastructureError> {
-    println!("Origins: {:?}", origins);
+fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, HttpInfrastructureError> {
     let origins = origins
         .iter()
         .map(|origin| {
@@ -46,10 +46,13 @@ fn root_router(config: &Config) -> Result<Router, HttpInfrastructureError> {
         .route("/status", get(|| async { "Alive !" })))
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum HttpInfrastructureError {
+    #[error("TcpListenerError: {0}")]
     TcpListener(std::io::Error),
+    #[error("AxumServeError: {0}")]
     AxumServe(std::io::Error),
+    #[error("OriginsError: {0}")]
     Origins(InvalidHeaderValue),
 }
 

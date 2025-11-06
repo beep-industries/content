@@ -9,11 +9,19 @@ Beep is open to contributions from anyone interested in making it better.
 - [Cargo](https://rustup.rs/)
 - [Docker](https://docs.docker.com/get-docker/)
 
+### 0. Setting up the environment
+
+```bash
+cp .env.example .env
+```
+
+Then, edit the `.env` file to set the correct values for the environment variables.
+
 ### 1. Setting up the bucket
 
 ```bash
 docker compose up -d
-./setup.sh > .env
+./setup.sh >> .env
 ```
 
 The setup script will create a bucket named `beep` and a key named `beep_admin` with read/write permissions for the bucket. It will output the credentials so we can redirect them to the `.env` file.
@@ -21,6 +29,11 @@ The setup script will create a bucket named `beep` and a key named `beep_admin` 
 ## Running the tests
 
 For this repository, we are using [cargo-insta](https://github.com/mitsuhiko/insta) for snapshot testing.
+ To install it, run:
+
+```bash
+cargo install cargo-insta
+```
 
 To run the tests, you can use the following command:
 

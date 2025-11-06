@@ -321,6 +321,7 @@ dependencies = [
  "clap 4.5.51",
  "dotenv",
  "insta",
+ "thiserror",
  "tokio",
  "tower",
  "tower-http",
