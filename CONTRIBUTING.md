@@ -27,3 +27,9 @@ To run the tests, you can use the following command:
 ```bash
 cargo test
 ```
+
+If your tests outputs are different from the snapshots, you can update the snapshots by running:
+
+```bash
+cargo insta review
+```

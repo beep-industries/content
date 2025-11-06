@@ -1,0 +1,5 @@
+---
+source: src/http.rs
+expression: "response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN)"
+---
+None
