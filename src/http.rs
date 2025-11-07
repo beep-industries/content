@@ -1,33 +1,32 @@
 use axum::{
     Router,
-    http::{HeaderValue, Method, header::InvalidHeaderValue},
+    http::{HeaderValue, Method},
     routing::get,
 };
-use thiserror::Error;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 
-use crate::config::Config;
+use crate::{config::Config, error::CoreError};
 
-pub async fn serve(config: Config) -> Result<(), HttpInfrastructureError> {
+pub async fn serve(config: Config) -> Result<(), CoreError> {
     let app = root_router(&config)?;
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await
-        .map_err(HttpInfrastructureError::TcpListener)?;
+        .map_err(|e| CoreError::HttpServer(format!("{}", e)))?;
     axum::serve(listener, app)
         .await
-        .map_err(HttpInfrastructureError::AxumServe)
+        .map_err(|e| CoreError::HttpServer(format!("{}", e)))
 }
 
-fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, HttpInfrastructureError> {
+fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
     let origins = origins
         .iter()
         .map(|origin| {
             origin
                 .parse::<HeaderValue>()
-                .map_err(HttpInfrastructureError::Origins)
+                .map_err(|e| CoreError::HttpServer(format!("{}", e)))
         })
-        .collect::<Result<Vec<HeaderValue>, HttpInfrastructureError>>()?;
+        .collect::<Result<Vec<HeaderValue>, CoreError>>()?;
 
     Ok(CorsLayer::new()
         .allow_methods([
@@ -40,36 +39,10 @@ fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, HttpInfrastructur
         .allow_origin(origins))
 }
 
-fn root_router(config: &Config) -> Result<Router, HttpInfrastructureError> {
+fn root_router(config: &Config) -> Result<Router, CoreError> {
     Ok(Router::new()
         .layer(default_cors_layer(&config.origins)?)
         .route("/status", get(|| async { "Alive !" })))
-}
-
-#[derive(Error, Debug)]
-pub enum HttpInfrastructureError {
-    #[error("TcpListenerError: {0}")]
-    TcpListener(std::io::Error),
-    #[error("AxumServeError: {0}")]
-    AxumServe(std::io::Error),
-    #[error("OriginsError: {0}")]
-    Origins(InvalidHeaderValue),
-}
-
-impl HttpInfrastructureError {
-    pub fn handle(&self) {
-        match self {
-            HttpInfrastructureError::TcpListener(e) => {
-                eprintln!("TcpListenerError: {}", e);
-            }
-            HttpInfrastructureError::AxumServe(e) => {
-                eprintln!("AxumServeError: {}", e);
-            }
-            HttpInfrastructureError::Origins(e) => {
-                eprintln!("OriginsError: {}", e);
-            }
-        }
-    }
 }
 
 #[cfg(test)]
