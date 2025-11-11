@@ -1,18 +1,36 @@
 receivers:
   otlp:
     protocols:
-      grpc: {}
-      http: {}
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
 exporters:
-  debug: {}
+  otlp:
+    endpoint: "otel-collector:4317"
+    tls:
+      insecure: true
+    sending_queue:
+      batch:
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
 
 service:
+  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [debug]
-
-# The above configuration receives OTLP (gRPC and HTTP) and exports traces to the collector
-# log output. This is convenient for local development — the collector will print spans it
-# receives to stdout so you can verify traces are arriving.
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      exporters: [otlp]
