@@ -7,10 +7,17 @@ edition = "2024"
 axum = "0.8.6"
 clap = { version = "4.5.51", features = ["derive", "env"] }
 dotenv = { version = "0.15.0", features = ["clap"] }
+fmt = "0.1.0"
+opentelemetry = "0.31.0"
+opentelemetry-stdout = "0.31.0"
+opentelemetry_sdk = "0.31.0"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["rt-multi-thread"] }
 tower = "0.5.2"
 tower-http = { version = "0.6.6", features = ["cors"] }
+tracing-opentelemetry = "0.32.0"
+tracing-subscriber = {version ="0.3.20", features = ["env-filter"]}
+tracing = "0.1.41"
 
 [dev-dependencies]
 insta = { version = "1.43.2", features = ["yaml"] }
