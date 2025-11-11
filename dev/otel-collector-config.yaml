@@ -1,0 +1,18 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: {}
+      http: {}
+
+exporters:
+  debug: {}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+
+# The above configuration receives OTLP (gRPC and HTTP) and exports traces to the collector
+# log output. This is convenient for local development — the collector will print spans it
+# receives to stdout so you can verify traces are arriving.
