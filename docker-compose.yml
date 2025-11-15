@@ -6,26 +6,14 @@ services:
     restart: unless-stopped
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: otel-collector
-    restart: unless-stopped
+    command: ["--config=/etc/otel-config.yaml"]
     ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP (optional)
-      - "55681:55681" # legacy gRPC port (optional)
-      - "8888:8888" # Prometheus metrics endpoint exposed by collector
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics endpoint
     volumes:
-      - ./dev/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
-    command: ["--config","/etc/otel-collector-config.yaml"]
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+      - ./otel-config.yaml:/etc/otel-config.yaml
     restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./dev/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on:
-      - otel-collector

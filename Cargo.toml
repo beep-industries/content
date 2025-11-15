@@ -23,6 +23,8 @@ ctrlc = "3.2.0"
 global = "0.4.3"
 tonic = "0.14.2"
 anyhow = "1.0.100"
+opentelemetry-semantic-conventions = { version = "0.31.0", features = ["semconv_experimental"] }
+tracing-core = "0.1.34"
 
 [dev-dependencies]
 insta = { version = "1.43.2", features = ["yaml"] }
