@@ -23,7 +23,6 @@ use tracing_core::Level;
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-// Create a Resource that captures information about the entity for which telemetry is recorded.
 fn resource() -> Resource {
     Resource::builder()
         .with_service_name(env!("CARGO_PKG_NAME"))
@@ -37,7 +36,6 @@ fn resource() -> Resource {
         .build()
 }
 
-// Construct MeterProvider for MetricsLayer
 fn init_meter_provider() -> SdkMeterProvider {
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
@@ -49,7 +47,6 @@ fn init_meter_provider() -> SdkMeterProvider {
         .with_interval(std::time::Duration::from_secs(30))
         .build();
 
-    // For debugging in development
     let stdout_reader =
         PeriodicReader::builder(opentelemetry_stdout::MetricExporter::default()).build();
 
@@ -64,7 +61,6 @@ fn init_meter_provider() -> SdkMeterProvider {
     meter_provider
 }
 
-// Construct TracerProvider for OpenTelemetryLayer
 fn init_tracer_provider() -> SdkTracerProvider {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
@@ -72,18 +68,15 @@ fn init_tracer_provider() -> SdkTracerProvider {
         .unwrap();
 
     SdkTracerProvider::builder()
-        // Customize sampling strategy
         .with_sampler(Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(
             1.0,
         ))))
-        // If export trace to AWS X-Ray, you can use XrayIdGenerator
         .with_id_generator(RandomIdGenerator::default())
         .with_resource(resource())
         .with_batch_exporter(exporter)
         .build()
 }
 
-// Initialize tracing-subscriber and return OtelGuard for opentelemetry-related termination processing
 fn init_tracing_subscriber() -> OtelGuard {
     let tracer_provider = init_tracer_provider();
     let meter_provider = init_meter_provider();
@@ -91,13 +84,6 @@ fn init_tracing_subscriber() -> OtelGuard {
     let tracer = tracer_provider.tracer("tracing-otel-subscriber");
 
     tracing_subscriber::registry()
-        // The global level filter prevents the exporter network stack
-        // from reentering the globally installed OpenTelemetryLayer with
-        // its own spans while exporting, as the libraries should not use
-        // tracing levels below DEBUG. If the OpenTelemetry layer needs to
-        // trace spans and events with higher verbosity levels, consider using
-        // per-layer filtering to target the telemetry layer specifically,
-        // e.g. by target matching.
         .with(tracing_subscriber::filter::LevelFilter::from_level(
             Level::INFO,
         ))
@@ -117,14 +103,21 @@ struct OtelGuard {
     meter_provider: SdkMeterProvider,
 }
 
-impl Drop for OtelGuard {
-    fn drop(&mut self) {
-        if let Err(err) = self.tracer_provider.shutdown() {
-            eprintln!("{err:?}");
-        }
-        if let Err(err) = self.meter_provider.shutdown() {
-            eprintln!("{err:?}");
-        }
+impl OtelGuard {
+    /// Shutdown providers and flush any buffered telemetry.
+    pub async fn shutdown(self) {
+        let tracer_provider = self.tracer_provider;
+        let meter_provider = self.meter_provider;
+
+        let _ = tokio::task::spawn_blocking(move || {
+            if let Err(err) = tracer_provider.shutdown() {
+                eprintln!("tracer shutdown error: {err:?}");
+            }
+            if let Err(err) = meter_provider.shutdown() {
+                eprintln!("meter shutdown error: {err:?}");
+            }
+        })
+        .await;
     }
 }
 
@@ -132,12 +125,15 @@ impl Drop for OtelGuard {
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     let config = Config::parse();
-    let _guard = init_tracing_subscriber();
+    let guard = init_tracing_subscriber();
 
     foo().await;
+
     let _ = crate::http::serve(config)
         .await
         .inspect_err(|e| eprintln!("{}", e));
+
+    guard.shutdown().await;
 
     Ok(())
 
