@@ -1,0 +1,9 @@
+[book]
+authors = ["beep <contact@beep.ovh>"]
+language = "en"
+src = "src"
+title = "Content documentation"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "rust"
