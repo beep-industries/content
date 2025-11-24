@@ -113,25 +113,11 @@ impl OtelGuard {
     }
 }
 
-#[tracing::instrument]
-async fn foo() {
-    tracing::info!(
-        monotonic_counter.foo = 1_u64,
-        key_1 = "bar",
-        key_2 = 10,
-        "handle foo",
-    );
-
-    tracing::info!(histogram.baz = 10, "histogram example",);
-}
-
 pub async fn run(config: Config) -> anyhow::Result<()> {
     dotenv().ok();
 
     let guard = init_tracing_subscriber();
-
-    foo().await;
-
+    
     let _ = crate::http::serve(config)
         .await
         .inspect_err(|e| eprintln!("{}", e));

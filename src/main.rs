@@ -6,7 +6,7 @@ use crate::config::Config;
 mod config;
 mod error;
 mod http;
-mod app;
+mod telemetry;
 
 
 #[tokio::main]
@@ -14,6 +14,6 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     let config = Config::parse();
 
-    app::run(config).await
+    telemetry::run(config).await
 }
 
