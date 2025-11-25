@@ -8,7 +8,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::{config::Config, error::CoreError};
 
-pub async fn serve(config: Config) -> Result<(), CoreError> {
+pub async fn serve(config: &Config) -> Result<(), CoreError> {
     let app = root_router(&config)?;
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await

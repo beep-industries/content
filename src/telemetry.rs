@@ -1,4 +1,3 @@
-use dotenv::dotenv;
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
 use opentelemetry_sdk::{
     metrics::{MeterProviderBuilder, PeriodicReader, SdkMeterProvider},
@@ -91,7 +90,7 @@ fn init_tracing_subscriber() -> Result<OtelGuard, TelemetryError> {
     })
 }
 
-struct OtelGuard {
+pub struct OtelGuard {
     tracer_provider: SdkTracerProvider,
     meter_provider: SdkMeterProvider,
 }
@@ -114,16 +113,8 @@ impl OtelGuard {
     }
 }
 
-pub async fn run(config: Config) -> Result<(), TelemetryError> {
-    dotenv().ok();
-
+pub fn init(_config: &Config) -> Result<OtelGuard, TelemetryError> {
     let guard = init_tracing_subscriber()?;
 
-    let _ = crate::http::serve(config)
-        .await
-        .inspect_err(|e| eprintln!("{}", e));
-
-    guard.shutdown().await;
-
-    Ok(())
+    Ok(guard)
 }

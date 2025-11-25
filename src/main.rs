@@ -17,8 +17,15 @@ async fn main() -> Result<(), CoreError>{
     dotenv().ok();
     let config = Config::parse();
 
-    telemetry::run(config)
+    let guard = telemetry::init(&config)
+        .map_err(|e| CoreError::HttpServer(format!("Telemetry error: {}", e)))?;
+
+    let _ = crate::http::serve(&config)
         .await
-        .map_err(|e| CoreError::HttpServer(format!("Application error: {}", e)))
+        .inspect_err(|e| eprintln!("{}", e));
+
+    guard.shutdown().await;
+
+    Ok(())
 }
 
