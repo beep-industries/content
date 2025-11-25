@@ -11,9 +11,11 @@ use opentelemetry_semantic_conventions::{
 };
 use tracing_core::Level;
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::config::Config;
+use crate::error::TelemetryError;
 
 fn resource() -> Resource {
     Resource::builder()
@@ -28,12 +30,12 @@ fn resource() -> Resource {
         .build()
 }
 
-fn init_meter_provider() -> SdkMeterProvider {
+fn init_meter_provider() -> Result<SdkMeterProvider, TelemetryError> {
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
         .with_temporality(opentelemetry_sdk::metrics::Temporality::default())
         .build()
-        .unwrap();
+        .map_err(|e| TelemetryError::OpenTelemetry(format!("failed to build OTLP metric exporter: {}", e)))?;
 
     let reader = PeriodicReader::builder(exporter)
         .with_interval(std::time::Duration::from_secs(30))
@@ -50,28 +52,27 @@ fn init_meter_provider() -> SdkMeterProvider {
 
     global::set_meter_provider(meter_provider.clone());
 
-    meter_provider
+    Ok(meter_provider)
 }
 
-fn init_tracer_provider() -> SdkTracerProvider {
+fn init_tracer_provider() -> Result<SdkTracerProvider, TelemetryError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .build()
-        .unwrap();
-
-    SdkTracerProvider::builder()
+        .map_err(|e| TelemetryError::OpenTelemetry(format!("failed to build OTLP span exporter: {}", e)))?;
+    Ok(SdkTracerProvider::builder()
         .with_sampler(Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(
             1.0,
         ))))
         .with_id_generator(RandomIdGenerator::default())
         .with_resource(resource())
         .with_batch_exporter(exporter)
-        .build()
+        .build())
 }
 
-fn init_tracing_subscriber() -> OtelGuard {
-    let tracer_provider = init_tracer_provider();
-    let meter_provider = init_meter_provider();
+fn init_tracing_subscriber() -> Result<OtelGuard, TelemetryError> {
+    let tracer_provider = init_tracer_provider()?;
+    let meter_provider = init_meter_provider()?;
 
     let tracer = tracer_provider.tracer("tracing-otel-subscriber");
 
@@ -84,10 +85,10 @@ fn init_tracing_subscriber() -> OtelGuard {
         .with(OpenTelemetryLayer::new(tracer))
         .init();
 
-    OtelGuard {
+    Ok(OtelGuard {
         tracer_provider,
         meter_provider,
-    }
+    })
 }
 
 struct OtelGuard {
@@ -113,11 +114,11 @@ impl OtelGuard {
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config) -> Result<(), TelemetryError> {
     dotenv().ok();
 
-    let guard = init_tracing_subscriber();
-    
+    let guard = init_tracing_subscriber()?;
+
     let _ = crate::http::serve(config)
         .await
         .inspect_err(|e| eprintln!("{}", e));

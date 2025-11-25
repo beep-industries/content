@@ -8,12 +8,17 @@ mod error;
 mod http;
 mod telemetry;
 
+use crate::error::CoreError;
+
+
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), CoreError>{
     dotenv().ok();
     let config = Config::parse();
 
-    telemetry::run(config).await
+    telemetry::run(config)
+        .await
+        .map_err(|e| CoreError::HttpServer(format!("Application error: {}", e)))
 }
 
