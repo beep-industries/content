@@ -1,0 +1,29 @@
+---
+source: src/storage/router.rs
+assertion_line: 47
+expression: response
+---
+TestResponse {
+    method: PUT,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/beep/test",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "43",
+    },
+    status_code: 200,
+    response_body: b"https://beep.s3.garage.aws.dxflrs.com/beep/",
+}

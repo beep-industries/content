@@ -1,15 +1,15 @@
+use std::sync::Arc;
+
 use axum::{
     Router,
     http::{HeaderValue, Method},
-    routing::get,
 };
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 
 use crate::{config::Config, error::CoreError};
 
-pub async fn serve(config: &Config) -> Result<(), CoreError> {
-    let app = root_router(&config)?;
+pub async fn serve(app: Router, config: Arc<Config>) -> Result<(), CoreError> {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await
         .map_err(|e| CoreError::HttpServer(format!("{}", e)))?;
@@ -18,7 +18,7 @@ pub async fn serve(config: &Config) -> Result<(), CoreError> {
         .map_err(|e| CoreError::HttpServer(format!("{}", e)))
 }
 
-fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
+pub fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
     let origins = origins
         .iter()
         .map(|origin| {
@@ -39,27 +39,31 @@ fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
         .allow_origin(origins))
 }
 
-fn root_router(config: &Config) -> Result<Router, CoreError> {
-    Ok(Router::new()
-        .layer(default_cors_layer(&config.origins)?)
-        .route("/status", get(|| async { "Alive !" })))
-}
-
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use std::sync::Arc;
+
     use axum::http::header;
     use axum_test::TestServer;
 
+    use crate::{
+        app::{MockAppStateOperations, TestAppState},
+        router,
+    };
+
     use super::*;
+
+    pub async fn test_server(config: Arc<Config>) -> TestServer {
+        let mut mock = MockAppStateOperations::new();
+        mock.expect_config().returning(move || Some(config.clone()));
+        let app_state = TestAppState::new(mock);
+        let service = router::app_test(app_state).await.unwrap();
+        TestServer::new(service).unwrap()
+    }
 
     #[tokio::test]
     async fn test_default_cors_layer() {
-        let config = Config {
-            origins: vec!["https://beep.com".to_string()],
-            port: 3000,
-        };
-        let service = root_router(&config).unwrap();
-        let test_server = TestServer::new(service).unwrap();
+        let test_server = test_server(Arc::new(Config::default())).await;
         let response = test_server
             .get("/status")
             .add_header(header::ORIGIN, "https://beep.com")

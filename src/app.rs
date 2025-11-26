@@ -1,0 +1,62 @@
+use std::sync::Arc;
+
+use mockall::automock;
+
+use crate::{
+    config::Config,
+    plumbing::ContentService,
+    s3::{S3, S3Error},
+};
+
+#[automock]
+pub trait AppStateOperations {
+    fn config(&self) -> Option<Arc<Config>>;
+    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error>;
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pub config: Arc<Config>,
+    pub service: Arc<ContentService>,
+}
+
+impl AppState {
+    pub fn new(service: Arc<ContentService>, args: Arc<Config>) -> Self {
+        Self {
+            service,
+            config: args,
+        }
+    }
+}
+
+impl AppStateOperations for AppState {
+    fn config(&self) -> Option<Arc<Config>> {
+        Some(self.config.clone())
+    }
+
+    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
+        self.service.s3.put_object(bucket, key, body).await
+    }
+}
+
+#[cfg(test)]
+#[derive(Clone)]
+pub struct TestAppState(Arc<MockAppStateOperations>);
+
+#[cfg(test)]
+impl TestAppState {
+    pub fn new(mock: MockAppStateOperations) -> Self {
+        Self(Arc::new(mock))
+    }
+}
+
+#[cfg(test)]
+impl AppStateOperations for TestAppState {
+    fn config(&self) -> Option<Arc<Config>> {
+        self.0.config()
+    }
+
+    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
+        self.0.upload(bucket, key, body).await
+    }
+}
