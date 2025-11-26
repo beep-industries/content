@@ -1,4 +1,3 @@
-version: "3"
 services:
   garage:
     image: docker.io/dxflrs/garage:v2.1.0
@@ -7,3 +6,14 @@ services:
     restart: unless-stopped
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.140.1
+    command: ["--config=/etc/otel-config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics endpoint
+    volumes:
+      - ./otel-config.yaml:/etc/otel-config.yaml
+    restart: unless-stopped
