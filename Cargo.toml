@@ -12,6 +12,7 @@ axum = { version = "0.8.6", features = ["multipart"] }
 clap = { version = "4.5.51", features = ["derive", "env"] }
 dotenv = { version = "0.15.0", features = ["clap"] }
 fmt = "0.1.0"
+lock_api = "0.4.2"
 opentelemetry = { version = "0.31.0"}
 opentelemetry-stdout = "0.31.0"
 opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"] }

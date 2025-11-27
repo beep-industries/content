@@ -10,82 +10,70 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  integration-tests:
     runs-on: ubuntu-latest
-
-    services:
-      garage:
-        image: docker.io/dxflrs/garage:v2.1.0
-        ports:
-          - 3900:3900
-        volumes:
-          - ${{ github.workspace }}/dev/garage.toml:/etc/garage.toml
-
+    permissions:
+        contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          path: ${{ github.sha }}
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1
+      - name: Run services
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          docker compose up -d
+      - name: Install cargo-insta
+        run: cargo install cargo-insta
+      - name: Wait for garage
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
+      - name: Setup S3 buckets
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          chmod +x setup.sh
+          ./setup.sh > .env
+      - name: Set up environment variables
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env.example >> .env
+          cat .env
+      - name: Run integration tests
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cargo test -- --ignored
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.sha }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           override: true
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-registry-
-
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-git-
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-build-
-
+          key: v1
       - name: Install cargo-insta
         run: cargo install cargo-insta
-
-      - name: Wait for Garage to be ready
-        run: |
-          echo "Waiting for Garage S3 service to be ready..."
-          for i in {1..30}; do
-            if curl -s http://localhost:3900 > /dev/null 2>&1; then
-              echo "Garage is ready!"
-              break
-            fi
-            echo "Attempt $i: Garage not ready yet, waiting..."
-            sleep 2
-          done
-
-      - name: Setup S3 buckets
-        run: |
-          chmod +x setup.sh
-          ./setup.sh >> .env
-
       - name: Set up environment variables
         run: |
-          echo "ORIGINS=http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000" >> .env
-          echo "PORT=3000" >> .env
-          echo "S3_ENDPOINT=http://0.0.0.0:3900/beep" >> .env
-          echo "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317" >> .env
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env.example >> .env
           cat .env
-
       - name: Run unit tests
-        run: cargo test
-
-      - name: Run integration tests
-        run: cargo test -- --ignored
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cargo test
