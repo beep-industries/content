@@ -2,7 +2,6 @@ use clap::Parser;
 use dotenv::dotenv;
 use std::sync::Arc;
 
-
 use crate::error::CoreError;
 
 use crate::{app::AppState, config::Config, plumbing::create_service};
@@ -21,7 +20,7 @@ mod telemetry;
 mod router_test;
 
 #[tokio::main]
-async fn main() -> Result<(), CoreError>{
+async fn main() -> Result<(), CoreError> {
     dotenv().ok();
     let config = Config::parse();
 
@@ -42,4 +41,3 @@ async fn main() -> Result<(), CoreError>{
 
     Ok(())
 }
-
