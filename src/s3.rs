@@ -15,6 +15,7 @@ pub trait S3: Send + Sync {
 
 pub struct Garage {
     client: s3::Client,
+    url: Uri,
 }
 
 impl Garage {
@@ -30,7 +31,7 @@ impl Garage {
 
         let client = s3::Client::from_conf(s3_config);
 
-        Self { client }
+        Self { client, url }
     }
 }
 
@@ -51,10 +52,9 @@ impl S3 for Garage {
                 S3Error::UploadFailure(service_error.to_string())
             })?;
 
-        Ok(format!(
-            "https://{}.s3.garage.aws.dxflrs.com/{}/{}",
-            bucket, bucket, key
-        ))
+        let object_url = self.url.to_string() + "/" + bucket + "/" + key;
+
+        Ok(object_url)
     }
 
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {

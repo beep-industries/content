@@ -12,10 +12,13 @@ pub struct Config {
     #[clap(
         env,
         long,
-        default_value = "http://0.0.0.0:3900/beep",
+        default_value = "http://0.0.0.0:3900/",
         help = "S3 endpoint"
     )]
     pub s3_endpoint: String,
+
+    #[clap(env, long, default_value = "beep", help = "S3 bucket")]
+    pub s3_bucket: String,
 
     #[clap(env, long, default_value = "beep_admin", help = "S3 key")]
     pub key_id: String,
@@ -42,6 +45,7 @@ pub mod tests {
                 .unwrap_or("http://0.0.0.0:3900/beep_test".to_string()),
             key_id: std::env::var("TEST_KEY_ID").unwrap_or("beep_test_admin".to_string()),
             secret_key: std::env::var("TEST_SECRET_KEY").unwrap_or("beep_test_admin".to_string()),
+            s3_bucket: std::env::var("TEST_S3_BUCKET").unwrap_or("test".to_string()),
             ..Default::default()
         }
     }

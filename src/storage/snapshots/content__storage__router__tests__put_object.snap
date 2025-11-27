@@ -1,6 +1,5 @@
 ---
 source: src/storage/router.rs
-assertion_line: 47
 expression: response
 ---
 TestResponse {
@@ -16,14 +15,14 @@ TestResponse {
             ),
         ),
         port: None,
-        path: "/beep/test",
+        path: "/beep/index.html",
         query: None,
         fragment: None,
     },
     headers: {
         "content-type": "text/plain; charset=utf-8",
-        "content-length": "43",
+        "content-length": "8",
     },
     status_code: 200,
-    response_body: b"https://beep.s3.garage.aws.dxflrs.com/beep/",
+    response_body: b"Uploaded",
 }

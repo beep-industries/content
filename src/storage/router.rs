@@ -4,23 +4,26 @@ use crate::{app::AppState, storage::handlers};
 
 pub fn storage_router(app_state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/{bucket}/{key}", put(handlers::put_object))
+        .route("/{prefix}/{file_name}", put(handlers::put_object_handler))
         .with_state(app_state)
 }
 
 #[cfg(test)]
 pub fn storage_router_test(app_state: crate::app::TestAppState) -> Router {
     Router::new()
-        .route("/{bucket}/{key}", put(handlers::put_object_test))
+        .route("/{prefix}/{file_name}", put(handlers::put_object_test))
         .with_state(app_state)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use axum_test::TestServer;
 
     use crate::{
         app::{MockAppStateOperations, TestAppState},
+        config::Config,
         storage::handlers::tests::build_multipart,
     };
 
@@ -29,9 +32,12 @@ mod tests {
     #[tokio::test]
     async fn test_put_object() {
         let mut operations = MockAppStateOperations::new();
-        operations.expect_upload().returning(|_, _, _| {
-            Ok("https://test.s3.garage.aws.dxflrs.com/test/test.html".to_string())
-        });
+        operations
+            .expect_upload()
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
+        operations
+            .expect_config()
+            .returning(|| Some(Arc::new(Config::default())));
         let app_state = TestAppState::new(operations);
         let router = storage_router_test(app_state);
 
@@ -41,7 +47,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .unwrap()
-            .put("/beep/test")
+            .put("/beep/index.html")
             .multipart(form)
             .await;
 
