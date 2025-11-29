@@ -1,8 +1,0 @@
----
-source: src/http.rs
-expression: response.headers()
----
-{
-    "content-type": "application/json",
-    "content-length": "11",
-}

@@ -1,9 +1,0 @@
----
-source: src/s3.rs
-expression: s3.show_buckets().await
----
-Ok(
-    [
-        "test",
-    ],
-)

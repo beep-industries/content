@@ -28,7 +28,6 @@ mod tests {
 
         let response = server.get("/status").await;
 
-        response.assert_status_ok();
-        response.assert_text("Alive !");
+        insta::assert_debug_snapshot!(response);
     }
 }
