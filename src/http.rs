@@ -47,7 +47,7 @@ pub mod tests {
     use axum_test::TestServer;
 
     use crate::{
-        app::{MockAppStateOperations, TestAppState},
+        app::{MockAppStateOperations, tests::TestAppState},
         router,
     };
 

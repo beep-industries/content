@@ -1,5 +1,7 @@
 use axum::Router;
 
+#[cfg(test)]
+use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
     error::CoreError,
@@ -18,7 +20,7 @@ pub async fn app(app_state: AppState) -> Result<Router, CoreError> {
 }
 
 #[cfg(test)]
-pub async fn app_test(app_state: crate::app::TestAppState) -> Result<Router, CoreError> {
+pub async fn app_test(app_state: TestAppState) -> Result<Router, CoreError> {
     use crate::{
         healthcheck::router::healthcheck_router_test, storage::router::storage_router_test,
     };

@@ -1,5 +1,7 @@
 use axum::{Router, routing::put};
 
+#[cfg(test)]
+use crate::app::tests::TestAppState;
 use crate::{app::AppState, storage::handlers};
 
 pub fn storage_router(app_state: AppState) -> Router {
@@ -9,7 +11,7 @@ pub fn storage_router(app_state: AppState) -> Router {
 }
 
 #[cfg(test)]
-pub fn storage_router_test(app_state: crate::app::TestAppState) -> Router {
+pub fn storage_router_test(app_state: TestAppState) -> Router {
     Router::new()
         .route("/{prefix}/{file_name}", put(handlers::put_object_test))
         .with_state(app_state)
@@ -22,9 +24,7 @@ mod tests {
     use axum_test::TestServer;
 
     use crate::{
-        app::{MockAppStateOperations, TestAppState},
-        config::Config,
-        storage::handlers::tests::build_multipart,
+        app::MockAppStateOperations, config::Config, storage::handlers::tests::build_multipart,
     };
 
     use super::*;

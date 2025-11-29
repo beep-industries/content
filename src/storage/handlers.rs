@@ -1,5 +1,7 @@
 use axum::extract::{Multipart, Path, State};
 
+#[cfg(test)]
+use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
     error::ApiError,
@@ -16,7 +18,7 @@ pub async fn put_object_handler(
 #[cfg(test)]
 pub async fn put_object_test(
     Path((prefix, file_name)): Path<(String, String)>,
-    State(state): State<crate::app::TestAppState>,
+    State(state): State<TestAppState>,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
     put_object(multipart, state, prefix, file_name).await
@@ -71,10 +73,7 @@ where
 pub mod tests {
     use std::sync::Arc;
 
-    use crate::{
-        app::{MockAppStateOperations, TestAppState},
-        config::Config,
-    };
+    use crate::{app::MockAppStateOperations, config::Config};
     use axum::{Router, routing::put};
     use axum_test::{
         TestServer,

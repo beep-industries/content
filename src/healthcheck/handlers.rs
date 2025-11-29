@@ -1,6 +1,8 @@
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
     error::ApiError,
@@ -19,7 +21,7 @@ pub async fn get_healthcheck_handler(
 
 #[cfg(test)]
 pub async fn get_healthcheck_test(
-    State(state): State<crate::app::TestAppState>,
+    State(state): State<TestAppState>,
 ) -> Result<Json<HealthCheck>, ApiError> {
     Ok(Json(healthcheck(state).await?))
 }

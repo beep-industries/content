@@ -45,27 +45,33 @@ impl AppStateOperations for AppState {
 }
 
 #[cfg(test)]
-#[derive(Clone)]
-pub struct TestAppState(Arc<MockAppStateOperations>);
+pub mod tests {
+    use super::*;
 
-#[cfg(test)]
-impl TestAppState {
-    pub fn new(mock: MockAppStateOperations) -> Self {
-        Self(Arc::new(mock))
-    }
-}
+    use std::sync::Arc;
 
-#[cfg(test)]
-impl AppStateOperations for TestAppState {
-    fn config(&self) -> Arc<Config> {
-        self.0.config()
-    }
+    use crate::app::MockAppStateOperations;
 
-    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
-        self.0.upload(bucket, key, body).await
+    #[derive(Clone)]
+    pub struct TestAppState(Arc<MockAppStateOperations>);
+
+    impl TestAppState {
+        pub fn new(mock: MockAppStateOperations) -> Self {
+            Self(Arc::new(mock))
+        }
     }
 
-    async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
-        self.0.show_buckets().await
+    impl AppStateOperations for TestAppState {
+        fn config(&self) -> Arc<Config> {
+            self.0.config()
+        }
+
+        async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
+            self.0.upload(bucket, key, body).await
+        }
+
+        async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
+            self.0.show_buckets().await
+        }
     }
 }

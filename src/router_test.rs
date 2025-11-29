@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        app::{MockAppStateOperations, TestAppState},
+        app::{MockAppStateOperations, tests::TestAppState},
         config::Config,
         router::app_test,
     };

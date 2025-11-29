@@ -1,5 +1,7 @@
 use axum::{Router, routing::get};
 
+#[cfg(test)]
+use crate::app::tests::TestAppState;
 use crate::{app::AppState, healthcheck::handlers};
 
 pub fn healthcheck_router(app_state: AppState) -> Router {
@@ -9,7 +11,7 @@ pub fn healthcheck_router(app_state: AppState) -> Router {
 }
 
 #[cfg(test)]
-pub fn healthcheck_router_test(app_state: crate::app::TestAppState) -> Router {
+pub fn healthcheck_router_test(app_state: TestAppState) -> Router {
     Router::new()
         .route("/status", get(handlers::get_healthcheck_test))
         .with_state(app_state)
@@ -22,7 +24,7 @@ mod tests {
     use axum_test::TestServer;
 
     use crate::{
-        app::{MockAppStateOperations, TestAppState},
+        app::MockAppStateOperations,
         config::{Config, tests::bootstrap_integration_tests},
         plumbing::create_service,
         s3::{Garage, S3, S3Error},
@@ -39,6 +41,9 @@ mod tests {
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+        operations
+            .expect_show_buckets()
+            .returning(|| Ok(vec!["bucket1".to_string(), "bucket2".to_string()]));
 
         let app_state = TestAppState::new(operations);
         let router = healthcheck_router_test(app_state);
@@ -60,6 +65,10 @@ mod tests {
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+        operations
+            .expect_show_buckets()
+            .returning(|| Ok(vec!["bucket1".to_string(), "bucket2".to_string()]));
+
         let app_state = TestAppState::new(operations);
         let router = healthcheck_router_test(app_state);
 

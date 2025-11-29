@@ -1,6 +1,5 @@
 ---
 source: src/storage/handlers.rs
-assertion_line: 134
 expression: response.status_code()
 ---
 400
