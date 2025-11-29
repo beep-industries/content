@@ -1,0 +1,79 @@
+name: Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.sha }}
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1
+      - name: Run services
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          docker compose up -d
+      - name: Install cargo-insta
+        run: cargo install cargo-insta
+      - name: Wait for garage
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
+      - name: Setup S3 buckets
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          chmod +x setup.sh
+          ./setup.sh > .env
+      - name: Set up environment variables
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env.example >> .env
+          cat .env
+      - name: Run integration tests
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cargo test -- --ignored
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.sha }}
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1
+      - name: Install cargo-insta
+        run: cargo install cargo-insta
+      - name: Set up environment variables
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env.example >> .env
+          cat .env
+      - name: Run unit tests
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cargo test

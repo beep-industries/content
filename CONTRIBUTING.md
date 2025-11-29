@@ -35,7 +35,7 @@ To install it, run:
 cargo install cargo-insta
 ```
 
-To run the tests, you can use the following command:
+To run the unit tests, you can use the following command:
 
 ```bash
 cargo test
@@ -45,6 +45,12 @@ If your tests outputs are different from the snapshots, you can update the snaps
 
 ```bash
 cargo insta review
+```
+
+Integration tests are ignored by default locally but are run in the CI pipeline. These tests need a running S3 to be executed so make sure that you launched `docker compose up`. To run these tests locally : 
+
+```bash
+cargo test -- --ignored
 ```
 
 ## Traces & logs
