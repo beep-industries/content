@@ -80,8 +80,8 @@ async fn test_put_object() {
 
     // Create test state and server
     let test_state = TestAppState::new(mock);
-    let app = app_test(test_state).await.unwrap();
-    let server = TestServer::new(app).unwrap();
+    let app = app_test(test_state).await.expect("Router creation failed");
+    let server = TestServer::new(app).expect("Test server creation failed");
 
     // Make request
     let response = server.put("/test-bucket/test-key").await;

@@ -895,6 +895,8 @@ dependencies = [
  "opentelemetry-stdout",
  "opentelemetry_sdk",
  "reqwest",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "tonic",

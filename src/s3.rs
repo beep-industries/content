@@ -37,6 +37,19 @@ impl Garage {
 
 #[automock]
 impl S3 for Garage {
+    /// Uploads a byte array to S3
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s3 = Garage::new(
+    ///     "https://s3.us-west-2.amazonaws.com".parse().unwrap(),
+    ///     "key_id",
+    ///     "secret_key",
+    /// );
+    /// let res = s3.put_object("test", "test.txt", vec![1, 2, 3]).await;
+    /// assert!(res.is_ok());
+    /// ```
     async fn put_object(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
         let body_stream = aws_sdk_s3::primitives::ByteStream::from(body);
 
@@ -57,6 +70,19 @@ impl S3 for Garage {
         Ok(object_url)
     }
 
+    /// List all buckets on S3
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s3 = Garage::new(
+    ///     "https://s3.us-west-2.amazonaws.com".parse().unwrap(),
+    ///     "key_id",
+    ///     "secret_key",
+    /// );
+    /// let res = s3.show_buckets().await;
+    /// assert!(res.is_ok());
+    /// ```
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
         let mut buckets = self.client.list_buckets().into_paginator().send();
 
@@ -67,8 +93,14 @@ impl S3 for Garage {
                 let service_error = e.into_service_error();
                 S3Error::UploadFailure(service_error.to_string())
             })?;
-            for bucket in output.buckets.unwrap() {
-                bucket_res.push(bucket.name.unwrap());
+            let Some(buckets) = output.buckets else {
+                return Err(S3Error::NoBucketFound);
+            };
+            for bucket in buckets {
+                let Some(bucket_name) = bucket.name else {
+                    return Err(S3Error::BucketNameError("No bucket name".to_string()));
+                };
+                bucket_res.push(bucket_name);
             }
         }
         Ok(bucket_res)
@@ -78,6 +110,8 @@ impl S3 for Garage {
 #[derive(Debug, thiserror::Error)]
 pub enum S3Error {
     UploadFailure(String),
+    NoBucketFound,
+    BucketNameError(String),
 }
 
 #[allow(clippy::from_over_into)]
@@ -91,6 +125,8 @@ impl Display for S3Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             S3Error::UploadFailure(e) => write!(f, "{}", e),
+            S3Error::NoBucketFound => write!(f, "No bucket found"),
+            S3Error::BucketNameError(e) => write!(f, "{}", e),
         }
     }
 }
@@ -106,7 +142,7 @@ mod tests {
     async fn test_show_buckets() {
         let config = bootstrap_integration_tests();
         let s3 = Garage::new(
-            config.s3_endpoint.parse().unwrap(),
+            config.s3_endpoint.parse().expect("Invalid S3 endpoint"),
             &config.key_id,
             &config.secret_key,
         );
@@ -118,14 +154,12 @@ mod tests {
     async fn test_put_object() {
         let config = bootstrap_integration_tests();
         let s3 = Garage::new(
-            config.s3_endpoint.parse().unwrap(),
+            // this is fine because we are not testing the config
+            config.s3_endpoint.parse().expect("Invalid S3 endpoint"),
             &config.key_id,
             &config.secret_key,
         );
         let res = s3.put_object("test", "test.txt", vec![1, 2, 3]).await;
-        if let Err(e) = res {
-            panic!("{}", e);
-        }
         assert!(res.is_ok());
     }
 }

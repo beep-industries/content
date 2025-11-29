@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{config, s3};
+use crate::{config, error::CoreError, s3};
 
 #[derive(Clone)]
 pub struct Service<S>
@@ -12,25 +12,14 @@ where
 
 pub type ContentService = Service<s3::Garage>;
 
-pub fn create_service(config: Arc<config::Config>) -> ContentService {
+pub fn create_service(config: Arc<config::Config>) -> Result<ContentService, CoreError> {
     let s3 = s3::Garage::new(
-        config.s3_endpoint.parse().unwrap(),
+        config
+            .s3_endpoint
+            .parse()
+            .map_err(|_| CoreError::S3EndpointError("Invalid S3 endpoint".to_string()))?,
         &config.key_id,
         &config.secret_key,
     );
-    Service { s3: Arc::new(s3) }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use std::sync::Arc;
-
-    use crate::{plumbing::Service, s3::MockGarage};
-
-    pub type MockContentService = Service<MockGarage>;
-    #[allow(dead_code)]
-    pub fn create_service() -> MockContentService {
-        let s3 = MockGarage::new();
-        Service { s3: Arc::new(s3) }
-    }
+    Ok(Service { s3: Arc::new(s3) })
 }

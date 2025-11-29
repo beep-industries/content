@@ -4,6 +4,8 @@ use axum::{http::StatusCode, response::IntoResponse};
 pub enum CoreError {
     #[error("HttpServerError: {0}")]
     HttpServer(String),
+    #[error("S3Error: {0}")]
+    S3EndpointError(String),
 }
 
 #[derive(Debug, thiserror::Error)]

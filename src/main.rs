@@ -9,6 +9,7 @@ use crate::{app::AppState, config::Config, plumbing::create_service};
 mod app;
 mod config;
 mod error;
+mod healthcheck;
 mod http;
 mod plumbing;
 mod router;
@@ -29,9 +30,12 @@ async fn main() -> Result<(), CoreError> {
 
     let config = Arc::new(config);
 
-    let content_service = Arc::new(create_service(config.clone()));
+    let content_service =
+        Arc::new(create_service(config.clone()).expect("Service creation failed"));
     let app_state: AppState = AppState::new(content_service, config.clone());
-    let root = router::app(app_state).await.unwrap();
+    let root = router::app(app_state)
+        .await
+        .expect("Router initialization error");
 
     let _ = crate::http::serve(root, config)
         .await

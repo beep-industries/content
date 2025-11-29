@@ -10,8 +10,9 @@ use crate::{
 
 #[automock]
 pub trait AppStateOperations {
-    fn config(&self) -> Option<Arc<Config>>;
+    fn config(&self) -> Arc<Config>;
     async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error>;
+    async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
 }
 
 #[derive(Clone)]
@@ -30,12 +31,16 @@ impl AppState {
 }
 
 impl AppStateOperations for AppState {
-    fn config(&self) -> Option<Arc<Config>> {
-        Some(self.config.clone())
+    fn config(&self) -> Arc<Config> {
+        self.config.clone()
     }
 
     async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
         self.service.s3.put_object(bucket, key, body).await
+    }
+
+    async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
+        self.service.s3.show_buckets().await
     }
 }
 
@@ -52,11 +57,15 @@ impl TestAppState {
 
 #[cfg(test)]
 impl AppStateOperations for TestAppState {
-    fn config(&self) -> Option<Arc<Config>> {
+    fn config(&self) -> Arc<Config> {
         self.0.config()
     }
 
     async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
         self.0.upload(bucket, key, body).await
+    }
+
+    async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
+        self.0.show_buckets().await
     }
 }

@@ -2,7 +2,7 @@ use axum::{Router, routing::put};
 
 use crate::{app::AppState, storage::handlers};
 
-pub fn storage_router(app_state: AppState) -> Router<AppState> {
+pub fn storage_router(app_state: AppState) -> Router {
     Router::new()
         .route("/{prefix}/{file_name}", put(handlers::put_object_handler))
         .with_state(app_state)
@@ -37,7 +37,7 @@ mod tests {
             .returning(|_, _, _| Ok("Uploaded".to_string()));
         operations
             .expect_config()
-            .returning(|| Some(Arc::new(Config::default())));
+            .returning(|| Arc::new(Config::default()));
         let app_state = TestAppState::new(operations);
         let router = storage_router_test(app_state);
 
@@ -46,7 +46,7 @@ mod tests {
         let form = build_multipart(BYTES, "index.html", "text/html");
 
         let response = TestServer::new(router)
-            .unwrap()
+            .expect("Axum test server creation failed")
             .put("/beep/index.html")
             .multipart(form)
             .await;

@@ -55,10 +55,12 @@ pub mod tests {
 
     pub async fn test_server(config: Arc<Config>) -> TestServer {
         let mut mock = MockAppStateOperations::new();
-        mock.expect_config().returning(move || Some(config.clone()));
+        mock.expect_config().returning(move || config.clone());
         let app_state = TestAppState::new(mock);
-        let service = router::app_test(app_state).await.unwrap();
-        TestServer::new(service).unwrap()
+        let service = router::app_test(app_state)
+            .await
+            .expect("Router creation failed");
+        TestServer::new(service).expect("Test server creation failed")
     }
 
     #[tokio::test]

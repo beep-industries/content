@@ -1,31 +1,32 @@
-use axum::{Router, routing::get};
+use axum::Router;
 
 use crate::{
     app::{AppState, AppStateOperations},
     error::CoreError,
+    healthcheck::router::healthcheck_router,
     http::default_cors_layer,
     storage::router::storage_router,
 };
 
 pub async fn app(app_state: AppState) -> Result<Router, CoreError> {
-    let config = app_state.config().unwrap();
+    let config = app_state.clone().config();
 
     Ok(Router::new()
-        .layer(default_cors_layer(&config.origins).unwrap())
-        .merge(storage_router(app_state.clone()))
-        .route("/status", get(|| async { "Alive !" }))
-        .with_state(app_state))
+        .layer(default_cors_layer(&config.origins)?)
+        .merge(healthcheck_router(app_state.clone()))
+        .merge(storage_router(app_state.clone())))
 }
 
 #[cfg(test)]
 pub async fn app_test(app_state: crate::app::TestAppState) -> Result<Router, CoreError> {
-    use crate::storage::router::storage_router_test;
+    use crate::{
+        healthcheck::router::healthcheck_router_test, storage::router::storage_router_test,
+    };
 
-    let config = app_state.config().unwrap();
+    let config = app_state.config();
 
     Ok(Router::new()
-        .layer(default_cors_layer(&config.origins).unwrap())
-        .route("/status", get(|| async { "Alive !" }))
-        .with_state(app_state.clone())
+        .layer(default_cors_layer(&config.origins)?)
+        .merge(healthcheck_router_test(app_state.clone()))
         .merge(storage_router_test(app_state.clone())))
 }
