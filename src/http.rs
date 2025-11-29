@@ -56,6 +56,8 @@ pub mod tests {
     pub async fn test_server(config: Arc<Config>) -> TestServer {
         let mut mock = MockAppStateOperations::new();
         mock.expect_config().returning(move || config.clone());
+        mock.expect_show_buckets()
+            .returning(|| Ok(vec!["bucket1".to_string(), "bucket2".to_string()]));
         let app_state = TestAppState::new(mock);
         let service = router::app_test(app_state)
             .await

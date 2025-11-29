@@ -19,6 +19,9 @@ mod tests {
             })
         });
 
+        mock.expect_show_buckets()
+            .returning(|| Ok(vec!["bucket1".to_string()]));
+
         let test_state = TestAppState::new(mock);
         let app = app_test(test_state).await.expect("Router creation failed");
         let server = TestServer::new(app).expect("Test server creation failed");
