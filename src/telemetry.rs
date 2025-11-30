@@ -1,12 +1,12 @@
-use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
+use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
 use opentelemetry_sdk::{
+    Resource,
     metrics::{MeterProviderBuilder, PeriodicReader, SdkMeterProvider},
     trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
-    Resource,
 };
 use opentelemetry_semantic_conventions::{
-    attribute::{DEPLOYMENT_ENVIRONMENT_NAME, SERVICE_VERSION},
     SCHEMA_URL,
+    attribute::{DEPLOYMENT_ENVIRONMENT_NAME, SERVICE_VERSION},
 };
 use tracing_core::Level;
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
@@ -34,7 +34,9 @@ fn init_meter_provider() -> Result<SdkMeterProvider, TelemetryError> {
         .with_tonic()
         .with_temporality(opentelemetry_sdk::metrics::Temporality::default())
         .build()
-        .map_err(|e| TelemetryError::OpenTelemetry(format!("failed to build OTLP metric exporter: {}", e)))?;
+        .map_err(|e| {
+            TelemetryError::OpenTelemetry(format!("failed to build OTLP metric exporter: {}", e))
+        })?;
 
     let reader = PeriodicReader::builder(exporter)
         .with_interval(std::time::Duration::from_secs(30))
@@ -58,7 +60,9 @@ fn init_tracer_provider() -> Result<SdkTracerProvider, TelemetryError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .build()
-        .map_err(|e| TelemetryError::OpenTelemetry(format!("failed to build OTLP span exporter: {}", e)))?;
+        .map_err(|e| {
+            TelemetryError::OpenTelemetry(format!("failed to build OTLP span exporter: {}", e))
+        })?;
     Ok(SdkTracerProvider::builder()
         .with_sampler(Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(
             1.0,
