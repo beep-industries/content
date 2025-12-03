@@ -21,10 +21,13 @@ Then, edit the `.env` file to set the correct values for the environment variabl
 
 ```bash
 docker compose up -d
-./setup.sh >> .env
+./setup.sh setup-s3 env # creates a bucket and a key for both test and dev
+./setup.sh gen-key env # creates a signing key
 ```
 
 The setup script will create a bucket named `beep` and a key named `beep_admin` with read/write permissions for the bucket. It will output the credentials so we can redirect them to the `.env` file.
+
+If you need for some reason to reset the environment, you can run `./setup.sh reset` to stop the containers and start them again. Run `./setup.sh reset env` to save the credentials in the `.env` file.
 
 ## Running the tests
 
