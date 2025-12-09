@@ -183,7 +183,6 @@ where
     ) -> Result<String, SignedUrlError> {
         let duration = self.time.now() + expires_in_ms;
         let url = self.build_signable_url(prefix, action, duration)?;
-        println!("sign : {}", url);
 
         let signature = self
             .signer
@@ -263,10 +262,7 @@ mod tests {
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
             .expect("Invalid signer");
         let url = sign_url("test".to_string(), AvailableActions::Put, 100);
-        println!("{}", url);
-
         let params = service.verify_url(&url);
-        println!("{:?}", params);
         assert!(params.is_ok());
     }
 }
