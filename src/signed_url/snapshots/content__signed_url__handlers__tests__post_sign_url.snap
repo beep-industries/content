@@ -1,0 +1,28 @@
+---
+source: src/signed_url/handlers.rs
+expression: response
+---
+TestResponse {
+    method: POST,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/sign",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "21",
+    },
+    status_code: 200,
+    response_body: b"https://beep.com/test",
+}

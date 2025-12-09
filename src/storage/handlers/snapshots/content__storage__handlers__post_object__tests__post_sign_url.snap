@@ -1,0 +1,28 @@
+---
+source: src/storage/handlers/post_object.rs
+expression: response
+---
+TestResponse {
+    method: POST,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/prefix/file_name",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "33",
+    },
+    status_code: 200,
+    response_body: b"https://beep.com/prefix/file_name",
+}

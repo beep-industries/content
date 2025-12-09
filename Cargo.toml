@@ -33,6 +33,12 @@ opentelemetry-semantic-conventions = { version = "0.31.0", features = ["semconv_
 tracing-core = "0.1.34"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+hmac = "0.12.1"
+sha2 = "0.10.9"
+chrono = "0.4.42"
+serde_qs = "0.15.0"
+http = "1.4.0"
+base64 = "0.22.1"
 
 [dev-dependencies]
 insta = { version = "1.43.2", features = ["yaml"] }

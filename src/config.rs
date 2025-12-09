@@ -25,6 +25,9 @@ pub struct Config {
 
     #[clap(env, long, default_value = "beep_admin", help = "S3 secret key")]
     pub secret_key: String,
+
+    #[clap(env, long, default_value = "https://beep.com", help = "Base URL")]
+    pub base_url: String,
 }
 
 #[cfg(test)]

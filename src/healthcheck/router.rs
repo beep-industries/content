@@ -28,6 +28,9 @@ mod tests {
         config::{Config, tests::bootstrap_integration_tests},
         plumbing::create_service,
         s3::{Garage, S3, S3Error},
+        signed_url::service::HMACUrlService,
+        signer::HMACSigner,
+        utils::get_time,
     };
 
     use super::*;
@@ -93,7 +96,15 @@ mod tests {
 
         let content_service =
             Arc::new(create_service(config.clone()).expect("Service creation failed"));
-        let app_state = AppState::new(content_service, config.clone());
+        let signer_service = Arc::new(
+            HMACUrlService::new(
+                HMACSigner::new(config.key_id.clone()).expect("Invalid signing key"),
+                get_time(),
+                "https://beep.com".to_string(),
+            )
+            .expect("Invalid signing key"),
+        );
+        let app_state = AppState::new(content_service, config.clone(), signer_service);
         let router = healthcheck_router(app_state);
 
         let response = TestServer::new(router)
