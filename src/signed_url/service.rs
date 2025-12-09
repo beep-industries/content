@@ -35,7 +35,7 @@ impl Display for AvailableActions {
 pub struct SignedURLParams {
     action: AvailableActions,
     expires: i64,
-    signature: Option<String>,
+    signature: String,
 }
 
 pub type HMACUrlService = SignedUrlServiceImpl<HMACSigner, RealTime>;
@@ -206,14 +206,7 @@ where
         let prefix = parsed_uri.path();
         let parsed_params: SignedURLParams = serde_qs::from_str(query)
             .map_err(|e| SignedUrlError::MissingQueryParams(e.to_string()))?;
-        let signature =
-            parsed_params
-                .signature
-                .as_ref()
-                .ok_or(SignedUrlError::MissingQueryParams(
-                    "Missing signature".to_string(),
-                ))?;
-        let Ok(signature) = URL_SAFE.decode(signature) else {
+        let Ok(signature) = URL_SAFE.decode(parsed_params.signature) else {
             return Err(SignedUrlError::InvalidEncoding);
         };
         let url = self.build_signable_url(
