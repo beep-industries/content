@@ -4,11 +4,14 @@ pub struct RealTime {}
 
 #[automock]
 pub trait Time {
-    fn now(&self) -> i64;
+    fn now(&self) -> u64;
 }
 impl Time for RealTime {
-    fn now(&self) -> i64 {
-        chrono::Utc::now().timestamp()
+    fn now(&self) -> u64 {
+        chrono::Utc::now()
+            .timestamp()
+            .try_into()
+            .unwrap_or_default()
     }
 }
 

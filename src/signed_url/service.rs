@@ -34,7 +34,7 @@ impl Display for AvailableActions {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignedURLParams {
     action: AvailableActions,
-    expires: i64,
+    expires: u64,
     signature: String,
 }
 
@@ -103,7 +103,7 @@ where
         &self,
         prefix: String,
         action: AvailableActions,
-        expires_in_ms: i64,
+        expires_in_ms: u64,
     ) -> Result<String, SignedUrlError>;
     #[allow(dead_code)]
     fn verify_url(&self, url: &str) -> Result<(), SignedUrlError>;
@@ -139,7 +139,7 @@ where
         &self,
         prefix: String,
         action: AvailableActions,
-        duration: i64,
+        duration: u64,
     ) -> Result<String, SignedUrlError> {
         let path = self.base_url.path();
         let path = Path::new(path).join(prefix);
@@ -179,7 +179,7 @@ where
         &self,
         prefix: String,
         action: AvailableActions,
-        expires_in_ms: i64,
+        expires_in_ms: u64,
     ) -> Result<String, SignedUrlError> {
         let duration = self.time.now() + expires_in_ms;
         let url = self.build_signable_url(prefix, action, duration)?;
@@ -220,7 +220,8 @@ where
         {
             return Err(SignedUrlError::InvalidSignature);
         };
-        if parsed_params.expires < chrono::Utc::now().timestamp() {
+        let now = self.time.now();
+        if parsed_params.expires < now {
             return Err(SignedUrlError::Expired);
         }
         Ok(())
@@ -232,8 +233,12 @@ mod tests {
     use super::*;
     use crate::{signer::HMACSigner, utils::tests::get_time};
 
-    pub fn sign_url(prefix: String, action: AvailableActions, expires: i64) -> String {
-        let duration = chrono::Utc::now().timestamp() + expires;
+    pub fn sign_url(prefix: String, action: AvailableActions, expires: u64) -> String {
+        let now: u64 = chrono::Utc::now()
+            .timestamp()
+            .try_into()
+            .expect("Time shouldnt be negative");
+        let duration = now + expires;
         let signer = HMACSigner::new("test".to_string()).expect("Invalid key");
         let time = get_time();
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())

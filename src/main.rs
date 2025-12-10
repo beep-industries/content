@@ -45,7 +45,7 @@ async fn main() -> Result<(), CoreError> {
             HMACSigner::new(config.key_id.clone())
                 .map_err(|e| CoreError::SigningKeyError(e.to_string()))?,
             time,
-            "https://beep.com".to_string(),
+            config.base_url.clone(),
         )
         .unwrap(),
     );

@@ -18,7 +18,7 @@ pub trait AppStateOperations {
         &self,
         prefix: String,
         action: AvailableActions,
-        expires_in_ms: i64,
+        expires_in_ms: u64,
     ) -> Result<String, SignedUrlError>;
     #[allow(dead_code)]
     fn verify_url(&self, url: &str) -> Result<(), SignedUrlError>;
@@ -62,7 +62,7 @@ impl AppStateOperations for AppState {
         &self,
         prefix: String,
         action: AvailableActions,
-        expires_in_ms: i64,
+        expires_in_ms: u64,
     ) -> Result<String, SignedUrlError> {
         self.signer.sign_url(prefix, action, expires_in_ms)
     }
@@ -106,7 +106,7 @@ pub mod tests {
             &self,
             prefix: String,
             action: AvailableActions,
-            expires_in_ms: i64,
+            expires_in_ms: u64,
         ) -> Result<String, SignedUrlError> {
             self.0.sign_url(prefix, action, expires_in_ms)
         }
