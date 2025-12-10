@@ -881,11 +881,15 @@ dependencies = [
  "aws-smithy-types",
  "axum",
  "axum-test",
+ "base64 0.22.1",
+ "chrono",
  "clap 4.5.53",
  "ctrlc",
  "dotenv",
  "fmt",
  "global",
+ "hmac",
+ "http 1.4.0",
  "insta",
  "lock_api 0.4.14",
  "mockall",
@@ -897,6 +901,8 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "serde_qs",
+ "sha2",
  "thiserror",
  "tokio",
  "tonic",
@@ -3166,6 +3172,17 @@ dependencies = [
  "itoa",
  "serde",
  "serde_core",
+]
+
+[[package]]
+name = "serde_qs"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3faaf9e727533a19351a43cc5a8de957372163c7d35cc48c90b75cdda13c352"
+dependencies = [
+ "percent-encoding",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

@@ -6,6 +6,8 @@ pub enum CoreError {
     HttpServer(String),
     #[error("S3Error: {0}")]
     S3EndpointError(String),
+    #[error("SigningKeyError: {0}")]
+    SigningKeyError(String),
 }
 
 #[derive(Debug, thiserror::Error)]

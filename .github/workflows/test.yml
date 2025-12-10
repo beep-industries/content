@@ -37,7 +37,8 @@ jobs:
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
           chmod +x setup.sh
-          ./setup.sh > .env
+          ./setup.sh setup-s3 env
+          ./setup.sh gen-key env
       - name: Set up environment variables
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
@@ -73,6 +74,7 @@ jobs:
           cd ${{ github.workspace }}/${{ github.sha }}
           cat .env.example >> .env
           cat .env
+          ./setup.sh gen-key env
       - name: Run unit tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
