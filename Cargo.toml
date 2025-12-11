@@ -39,6 +39,8 @@ chrono = "0.4.42"
 serde_qs = "0.15.0"
 http = "1.4.0"
 base64 = "0.22.1"
+utoipa = "5.4.0"
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 
 [dev-dependencies]
 insta = { version = "1.43.2", features = ["yaml"] }

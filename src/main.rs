@@ -14,6 +14,7 @@ mod config;
 mod error;
 mod healthcheck;
 mod http;
+mod openapi;
 mod plumbing;
 mod router;
 mod s3;

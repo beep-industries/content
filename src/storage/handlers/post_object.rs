@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
@@ -12,13 +13,13 @@ use crate::{
     signed_url::service::AvailableActions,
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct SignUrlRequest {
     pub action: AvailableActions,
     pub expires_in_ms: u64,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct SignUrlResponse {
     pub url: String,
 }
@@ -37,6 +38,21 @@ where
     Ok(SignUrlResponse { url })
 }
 
+#[utoipa::path(
+    post,
+    path = "/{prefix}/{file_name}",
+    tag = "storage",
+    request_body = SignUrlRequest,
+    params(
+        ("prefix" = String, Path, description = "Bucket prefix"),
+        ("file_name" = String, Path, description = "File name"),
+    ),
+    responses(
+        (status = 200, description = "Upload successful", body = SignUrlResponse),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 500, description = "Internal server error", body = String),
+    ),
+)]
 pub async fn post_sign_url_handler(
     Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<AppState>,

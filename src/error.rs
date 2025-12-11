@@ -1,4 +1,5 @@
 use axum::{http::StatusCode, response::IntoResponse};
+use utoipa::ToSchema;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {
@@ -23,7 +24,7 @@ pub struct ValidationError {
     pub field: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema)]
 pub enum ApiError {
     InternalServerError(String),
     #[allow(dead_code)]

@@ -1,4 +1,5 @@
 use axum::extract::{Multipart, Path, State};
+use utoipa::ToSchema;
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
@@ -7,6 +8,28 @@ use crate::{
     error::ApiError,
 };
 
+#[derive(ToSchema)]
+#[allow(dead_code)]
+struct UploadRequest {
+    #[schema(content_media_type = "application/octet-stream")]
+    pub file: Vec<u8>,
+}
+
+#[utoipa::path(
+    put,
+    path = "/{prefix}/{file_name}",
+    tag = "storage",
+    params(
+        ("prefix" = String, Path, description = "Bucket prefix"),
+        ("file_name" = String, Path, description = "File name"),
+    ),
+    request_body(content = UploadRequest, content_type = "multipart/form-data"),
+    responses(
+        (status = 200, description = "Upload successful", body = String),
+        (status = 400, description = "Invalid request", body = String),
+        (status = 500, description = "Internal server error", body = String),
+    ),
+)]
 pub async fn put_object_handler(
     Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<AppState>,

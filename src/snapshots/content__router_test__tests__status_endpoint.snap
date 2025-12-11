@@ -19,10 +19,7 @@ TestResponse {
         query: None,
         fragment: None,
     },
-    headers: {
-        "content-type": "application/json",
-        "content-length": "11",
-    },
-    status_code: 200,
-    response_body: b"{\"s3\":true}",
+    headers: {},
+    status_code: 404,
+    response_body: b"",
 }

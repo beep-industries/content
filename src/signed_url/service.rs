@@ -7,6 +7,7 @@ use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use http::{Uri, uri::Scheme};
 use mockall::automock;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     error::{ApiError, CoreError},
@@ -14,7 +15,7 @@ use crate::{
     utils::{RealTime, Time},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum AvailableActions {
     Put,
     Get,
