@@ -15,7 +15,7 @@ TestResponse {
             ),
         ),
         port: None,
-        path: "/status",
+        path: "/health",
         query: None,
         fragment: None,
     },
