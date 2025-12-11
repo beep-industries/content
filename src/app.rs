@@ -22,6 +22,7 @@ pub trait AppStateOperations {
     ) -> Result<String, SignedUrlError>;
     #[allow(dead_code)]
     fn verify_url(&self, url: &str) -> Result<(), SignedUrlError>;
+    async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
 }
 
 #[derive(Clone)]
@@ -70,6 +71,10 @@ impl AppStateOperations for AppState {
     fn verify_url(&self, url: &str) -> Result<(), SignedUrlError> {
         self.signer.verify_url(url)
     }
+
+    async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
+        self.service.s3.get_object(bucket, key).await
+    }
 }
 
 #[cfg(test)]
@@ -113,6 +118,10 @@ pub mod tests {
 
         fn verify_url(&self, url: &str) -> Result<(), SignedUrlError> {
             self.0.verify_url(url)
+        }
+
+        async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
+            self.0.get_object(bucket, key).await
         }
     }
 }

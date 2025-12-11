@@ -1,29 +1,36 @@
 use axum::{
     Router,
-    routing::{post, put},
+    routing::{get, post, put},
 };
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
 use crate::{
     app::AppState,
-    storage::handlers::{post_object::post_sign_url_handler, put_object::put_object_handler},
+    storage::handlers::{
+        get_object::get_object_handler, post_object::post_sign_url_handler,
+        put_object::put_object_handler,
+    },
 };
 
 pub fn storage_router(app_state: AppState) -> Router {
     Router::new()
         .route("/{prefix}/{file_name}", put(put_object_handler))
         .route("/{prefix}/{file_name}", post(post_sign_url_handler))
+        .route("/{prefix}/{file_name}", get(get_object_handler))
         .with_state(app_state)
 }
 
 #[cfg(test)]
 pub fn storage_router_test(app_state: TestAppState) -> Router {
-    use crate::storage::handlers::{post_object::post_sign_url_test, put_object::put_object_test};
+    use crate::storage::handlers::{
+        get_object::get_object_test, post_object::post_sign_url_test, put_object::put_object_test,
+    };
 
     Router::new()
         .route("/{prefix}/{file_name}", put(put_object_test))
         .route("/{prefix}/{file_name}", post(post_sign_url_test))
+        .route("/{prefix}/{file_name}", get(get_object_test))
         .with_state(app_state)
 }
 
