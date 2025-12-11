@@ -1,7 +1,4 @@
-use axum::{
-    body::Body,
-    extract::{Path, State},
-};
+use axum::{body::Body, extract::State};
 use http::Response;
 
 #[cfg(test)]
@@ -9,6 +6,7 @@ use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
     error::ApiError,
+    signed_url::extractor::SignedUrl,
 };
 
 #[utoipa::path(
@@ -22,9 +20,15 @@ use crate::{
     ),
 )]
 pub async fn get_object_handler(
-    Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<AppState>,
+    SignedUrl(claims): SignedUrl,
 ) -> Result<Response<Body>, ApiError> {
+    let path = claims.path.split('/').collect::<Vec<&str>>();
+    if path.len() != 3 {
+        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
+    }
+    let prefix = path[1].to_string();
+    let file_name = path[2].to_string();
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -44,9 +48,15 @@ where
 
 #[cfg(test)]
 pub async fn get_object_test(
-    Path((prefix, file_name)): Path<(String, String)>,
+    SignedUrl(claims): SignedUrl,
     State(state): State<TestAppState>,
 ) -> Result<Response<Body>, ApiError> {
+    let path = claims.path.split('/').collect::<Vec<&str>>();
+    if path.len() != 3 {
+        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
+    }
+    let prefix = path[1].to_string();
+    let file_name = path[2].to_string();
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -60,6 +70,7 @@ mod tests {
     use crate::{
         app::{MockAppStateOperations, tests::TestAppState},
         config::Config,
+        signed_url::{extractor::Claims, service::AvailableActions},
     };
 
     use super::*;
@@ -79,6 +90,12 @@ mod tests {
         operations
             .expect_get_object()
             .returning(|_, _| Ok((vec![1, 2, 3], "text/plain".to_string())));
+        operations.expect_verify_parts().returning(|_| {
+            Ok(Claims {
+                path: "/test-bucket/index.html".to_string(),
+                action: AvailableActions::Put,
+            })
+        });
 
         let app_state = TestAppState::new(operations);
         let router = fake_router(app_state);

@@ -3,20 +3,23 @@ use std::{
     path::Path,
 };
 
+use axum::response::IntoResponse;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
-use http::{Uri, uri::Scheme};
+use http::{StatusCode, Uri, uri::Scheme};
 use mockall::automock;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
     error::{ApiError, CoreError},
+    signed_url::extractor::Claims,
     signer::{HMACSigner, Signer},
     utils::{RealTime, Time},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Copy, Default)]
 pub enum AvailableActions {
+    #[default]
     Put,
     Get,
     Delete,
@@ -32,11 +35,21 @@ impl Display for AvailableActions {
     }
 }
 
+impl From<AvailableActions> for http::Method {
+    fn from(action: AvailableActions) -> Self {
+        match action {
+            AvailableActions::Put => http::Method::PUT,
+            AvailableActions::Get => http::Method::GET,
+            AvailableActions::Delete => http::Method::DELETE,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignedURLParams {
-    action: AvailableActions,
-    expires: u64,
-    signature: String,
+    pub action: AvailableActions,
+    pub expires: u64,
+    pub signature: String,
 }
 
 pub type HMACUrlService = SignedUrlServiceImpl<HMACSigner, RealTime>;
@@ -75,6 +88,21 @@ impl Into<ApiError> for SignedUrlError {
     }
 }
 
+impl IntoResponse for SignedUrlError {
+    fn into_response(self) -> axum::response::Response {
+        let status = match self {
+            SignedUrlError::MissingQueryParams(_) => StatusCode::BAD_REQUEST,
+            SignedUrlError::InvalidEncoding => StatusCode::BAD_REQUEST,
+            SignedUrlError::InvalidBaseUrl(_) => StatusCode::BAD_REQUEST,
+            SignedUrlError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            SignedUrlError::Expired => StatusCode::UNAUTHORIZED,
+            SignedUrlError::InvalidSignature => StatusCode::UNAUTHORIZED,
+            SignedUrlError::Unauthorized => StatusCode::UNAUTHORIZED,
+        };
+        (status, self.to_string()).into_response()
+    }
+}
+
 impl Display for SignedUrlError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -107,7 +135,8 @@ where
         expires_in_ms: u64,
     ) -> Result<String, SignedUrlError>;
     #[allow(dead_code)]
-    fn verify_url(&self, url: &str) -> Result<(), SignedUrlError>;
+    fn verify_url(&self, url: &str) -> Result<Claims, SignedUrlError>;
+    fn verify_parts(&self, parts: http::request::Parts) -> Result<Claims, SignedUrlError>;
 }
 
 pub struct SignedUrlServiceImpl<S, T>
@@ -194,7 +223,7 @@ where
         Ok(url)
     }
 
-    fn verify_url(&self, url: &str) -> Result<(), SignedUrlError> {
+    fn verify_url(&self, url: &str) -> Result<Claims, SignedUrlError> {
         let parsed_uri = url
             .parse::<Uri>()
             .map_err(|e| SignedUrlError::InvalidBaseUrl(e.to_string()))?;
@@ -225,12 +254,27 @@ where
         if parsed_params.expires < now {
             return Err(SignedUrlError::Expired);
         }
-        Ok(())
+        let action = parsed_params.action;
+        let path = prefix.to_string();
+        Ok(Claims { action, path })
+    }
+
+    fn verify_parts(&self, parts: http::request::Parts) -> Result<Claims, SignedUrlError> {
+        let uri = parts.uri.to_string();
+        let claims = self.verify_url(&uri)?;
+        let action_as_method: http::Method = claims.action.into();
+        if parts.method != action_as_method {
+            return Err(SignedUrlError::InvalidSignature);
+        }
+        Ok(claims)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use axum::extract::FromRequest;
+    use http::Request;
+
     use super::*;
     use crate::{signer::HMACSigner, utils::tests::get_time};
 
@@ -270,5 +314,48 @@ mod tests {
         let url = sign_url("test".to_string(), AvailableActions::Put, 100);
         let params = service.verify_url(&url);
         assert!(params.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_verify_parts() {
+        let signer = HMACSigner::new("test".to_string()).expect("Invalid key");
+        let time = get_time();
+        let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
+            .expect("Invalid signer");
+        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let request = Request::builder()
+            .uri(url)
+            .method(http::Method::PUT)
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let parts = http::request::Parts::from_request(request, &())
+            .await
+            .expect("Invalid request");
+        let params = service.verify_parts(parts);
+        assert!(params.is_ok());
+        let params = params.unwrap();
+        assert_eq!(params.path, "/test");
+        assert_eq!(params.action, AvailableActions::Put);
+    }
+
+    #[tokio::test]
+    async fn test_verify_parts_invalid_method() {
+        let signer = HMACSigner::new("test".to_string()).expect("Invalid key");
+        let time = get_time();
+        let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
+            .expect("Invalid signer");
+        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let request = Request::builder()
+            .uri(url)
+            .method(http::Method::GET)
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let parts = http::request::Parts::from_request(request, &())
+            .await
+            .expect("Invalid request");
+        let params = service.verify_parts(parts);
+        assert!(params.is_err());
     }
 }

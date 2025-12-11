@@ -83,7 +83,10 @@ mod tests {
     use axum::{Router, routing::post};
     use axum_test::TestServer;
 
-    use crate::{app::MockAppStateOperations, signed_url::service::AvailableActions};
+    use crate::{
+        app::MockAppStateOperations,
+        signed_url::{extractor::Claims, service::AvailableActions},
+    };
 
     use super::*;
 
@@ -99,7 +102,9 @@ mod tests {
         operations
             .expect_sign_url()
             .returning(|_, _, _| Ok("https://beep.com/prefix/file_name".to_string()));
-        operations.expect_verify_url().returning(|_| Ok(()));
+        operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
 
         let app_state = TestAppState::new(operations);
         let router = fake_router(app_state);
