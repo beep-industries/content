@@ -59,9 +59,12 @@ mod tests {
             .expect_config()
             .returning(|| Arc::new(Config::default()));
 
-        operations
-            .expect_verify_parts()
-            .returning(|_| Ok(Claims::default()));
+        operations.expect_verify_parts().returning(|_| {
+            Ok(Claims {
+                path: "/test-bucket/index.html".to_string(),
+                action: AvailableActions::Put,
+            })
+        });
         let app_state = TestAppState::new(operations);
         let router = storage_router_test(app_state);
 

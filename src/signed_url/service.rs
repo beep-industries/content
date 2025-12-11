@@ -272,6 +272,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use axum::extract::FromRequest;
+    use http::Request;
+
     use super::*;
     use crate::{signer::HMACSigner, utils::tests::get_time};
 
@@ -311,5 +314,48 @@ mod tests {
         let url = sign_url("test".to_string(), AvailableActions::Put, 100);
         let params = service.verify_url(&url);
         assert!(params.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_verify_parts() {
+        let signer = HMACSigner::new("test".to_string()).expect("Invalid key");
+        let time = get_time();
+        let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
+            .expect("Invalid signer");
+        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let request = Request::builder()
+            .uri(url)
+            .method(http::Method::PUT)
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let parts = http::request::Parts::from_request(request, &())
+            .await
+            .expect("Invalid request");
+        let params = service.verify_parts(parts);
+        assert!(params.is_ok());
+        let params = params.unwrap();
+        assert_eq!(params.path, "/test");
+        assert_eq!(params.action, AvailableActions::Put);
+    }
+
+    #[tokio::test]
+    async fn test_verify_parts_invalid_method() {
+        let signer = HMACSigner::new("test".to_string()).expect("Invalid key");
+        let time = get_time();
+        let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
+            .expect("Invalid signer");
+        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let request = Request::builder()
+            .uri(url)
+            .method(http::Method::GET)
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let parts = http::request::Parts::from_request(request, &())
+            .await
+            .expect("Invalid request");
+        let params = service.verify_parts(parts);
+        assert!(params.is_err());
     }
 }

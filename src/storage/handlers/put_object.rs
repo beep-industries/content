@@ -1,5 +1,5 @@
-use utoipa::ToSchema;
 use axum::extract::{Multipart, State};
+use utoipa::ToSchema;
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
@@ -109,7 +109,11 @@ where
 pub mod tests {
     use std::sync::Arc;
 
-    use crate::{app::MockAppStateOperations, config::Config, signed_url::extractor::Claims};
+    use crate::{
+        app::MockAppStateOperations,
+        config::Config,
+        signed_url::{extractor::Claims, service::AvailableActions},
+    };
     use axum::{Router, routing::put};
     use axum_test::{
         TestServer,
@@ -144,9 +148,12 @@ pub mod tests {
             .expect_upload()
             .returning(|_, _, _| Ok("Uploaded".to_string()));
 
-        operations
-            .expect_verify_parts()
-            .returning(|_| Ok(Claims::default()));
+        operations.expect_verify_parts().returning(|_| {
+            Ok(Claims {
+                path: "/test-bucket/index.html".to_string(),
+                action: AvailableActions::Put,
+            })
+        });
 
         operations
             .expect_config()
@@ -204,9 +211,12 @@ pub mod tests {
             .expect_upload()
             .returning(|_, _, _| Ok("Uploaded".to_string()));
 
-        operations
-            .expect_verify_parts()
-            .returning(|_| Ok(Claims::default()));
+        operations.expect_verify_parts().returning(|_| {
+            Ok(Claims {
+                path: "/test-bucket/index.html".to_string(),
+                action: AvailableActions::Put,
+            })
+        });
 
         operations
             .expect_config()

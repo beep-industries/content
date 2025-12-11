@@ -23,19 +23,7 @@ where
         parts: &mut http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let Some(query) = parts.uri.query() else {
-            return Err(SignedUrlError::MissingQueryParams(
-                "Missing query params".to_string(),
-            ));
-        };
-
-        let params: crate::signed_url::service::SignedURLParams = serde_qs::from_str(query)
-            .map_err(|e| SignedUrlError::MissingQueryParams(e.to_string()))?;
-        let action = params.action;
-        let path = parts.uri.path().to_string();
-        state.verify_parts(parts.clone())?;
-
-        Ok(Self(Claims { action, path }))
+        Ok(Self(state.verify_parts(parts.clone())?))
     }
 }
 
