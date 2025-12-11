@@ -202,8 +202,8 @@ mod tests {
             &config.key_id,
             &config.secret_key,
         );
-        let _ = s3.put_object("test2", "test.txt", vec![1, 2, 3]).await;
-        let res = s3.get_object("test2", "test.txt").await;
+        let _ = s3.put_object("test", "test2.txt", vec![1, 2, 3]).await;
+        let res = s3.get_object("test", "test2.txt").await;
         assert!(res.is_ok());
     }
 }
