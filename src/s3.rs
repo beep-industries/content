@@ -1,5 +1,6 @@
 use mockall::automock;
 use std::fmt::{Display, Formatter};
+use tracing::info;
 
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::{self as s3, config::Credentials};
@@ -9,8 +10,8 @@ use crate::error::ApiError;
 
 pub trait S3: Send + Sync {
     async fn put_object(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error>;
-    #[allow(dead_code)]
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
+    async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
 }
 
 pub struct Garage {
@@ -105,6 +106,34 @@ impl S3 for Garage {
         }
         Ok(bucket_res)
     }
+
+    async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
+        let object = self
+            .client
+            .get_object()
+            .bucket(bucket)
+            .key(key)
+            .send()
+            .await
+            .map_err(|e| {
+                let service_error = e.into_service_error();
+                S3Error::UploadFailure(service_error.to_string())
+            })?;
+
+        info!("Downloading object from S3 {:?}", object);
+
+        let mime_type = object
+            .content_type
+            .clone()
+            .unwrap_or("application/octet-stream".to_string());
+
+        let body = object.body.collect().await.map_err(|e| {
+            let service_error = e.to_string();
+            S3Error::UploadFailure(service_error)
+        })?;
+
+        Ok((body.to_vec(), mime_type.to_string()))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -160,6 +189,21 @@ mod tests {
             &config.secret_key,
         );
         let res = s3.put_object("test", "test.txt", vec![1, 2, 3]).await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_get_object() {
+        let config = bootstrap_integration_tests();
+        let s3 = Garage::new(
+            // this is fine because we are not testing the config
+            config.s3_endpoint.parse().expect("Invalid S3 endpoint"),
+            &config.key_id,
+            &config.secret_key,
+        );
+        let _ = s3.put_object("test2", "test.txt", vec![1, 2, 3]).await;
+        let res = s3.get_object("test2", "test.txt").await;
         assert!(res.is_ok());
     }
 }
