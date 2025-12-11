@@ -6,14 +6,14 @@ use crate::{app::AppState, healthcheck::handlers};
 
 pub fn healthcheck_router(app_state: AppState) -> Router {
     Router::new()
-        .route("/status", get(handlers::get_healthcheck_handler))
+        .route("/health", get(handlers::get_healthcheck_handler))
         .with_state(app_state)
 }
 
 #[cfg(test)]
 pub fn healthcheck_router_test(app_state: TestAppState) -> Router {
     Router::new()
-        .route("/status", get(handlers::get_healthcheck_test))
+        .route("/health", get(handlers::get_healthcheck_test))
         .with_state(app_state)
 }
 
@@ -53,7 +53,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
-            .get("/status")
+            .get("/health")
             .await;
 
         insta::assert_debug_snapshot!(response);
@@ -77,7 +77,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
-            .get("/status")
+            .get("/health")
             .await;
         insta::assert_debug_snapshot!(response);
     }
@@ -109,7 +109,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
-            .get("/status")
+            .get("/health")
             .await;
 
         insta::assert_debug_snapshot!(response);

@@ -1,4 +1,8 @@
 use axum::Router;
+use utoipa::OpenApi;
+use utoipa_scalar::{Scalar, Servable};
+
+use crate::openapi::ApiDoc;
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
@@ -12,9 +16,11 @@ use crate::{
 
 pub async fn app(app_state: AppState) -> Result<Router, CoreError> {
     let config = app_state.clone().config();
+    let openapi = ApiDoc::openapi();
 
     Ok(Router::new()
         .layer(default_cors_layer(&config.origins)?)
+        .merge(Scalar::with_url("/docs", openapi.clone()))
         .merge(healthcheck_router(app_state.clone()))
         .merge(storage_router(app_state.clone())))
 }
