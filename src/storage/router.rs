@@ -43,7 +43,7 @@ mod tests {
     use crate::{
         app::MockAppStateOperations,
         config::Config,
-        signed_url::service::AvailableActions,
+        signed_url::{extractor::Claims, service::AvailableActions},
         storage::handlers::{post_object::SignUrlRequest, put_object::tests::build_multipart},
     };
 
@@ -58,6 +58,10 @@ mod tests {
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+
+        operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
         let app_state = TestAppState::new(operations);
         let router = storage_router_test(app_state);
 
@@ -67,7 +71,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
-            .put("/beep/index.html")
+            .put("/beep/index.html?action=Put&expires=1684969600&signature=test")
             .multipart(form)
             .await;
 
@@ -80,7 +84,9 @@ mod tests {
         operations
             .expect_sign_url()
             .returning(|_, _, _| Ok("https://beep.com/prefix/file_name".to_string()));
-        operations.expect_verify_url().returning(|_| Ok(()));
+        operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
         let app_state = TestAppState::new(operations);
         let router = storage_router_test(app_state);
 

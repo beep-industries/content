@@ -16,7 +16,9 @@ TestResponse {
         ),
         port: None,
         path: "/beep/index.html",
-        query: None,
+        query: Some(
+            "action=Put&expires=1684969600&signature=test",
+        ),
         fragment: None,
     },
     headers: {

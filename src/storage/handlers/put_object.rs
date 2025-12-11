@@ -1,11 +1,12 @@
-use axum::extract::{Multipart, Path, State};
 use utoipa::ToSchema;
+use axum::extract::{Multipart, State};
 
 #[cfg(test)]
 use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
     error::ApiError,
+    signed_url::extractor::SignedUrl,
 };
 
 #[derive(ToSchema)]
@@ -31,19 +32,31 @@ struct UploadRequest {
     ),
 )]
 pub async fn put_object_handler(
-    Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<AppState>,
+    SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
+    let path = claims.path.split('/').collect::<Vec<&str>>();
+    if path.len() != 3 {
+        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
+    }
+    let prefix = path[1].to_string();
+    let file_name = path[2].to_string();
     put_object(multipart, state, prefix, file_name).await
 }
 
 #[cfg(test)]
 pub async fn put_object_test(
-    Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<TestAppState>,
+    SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
+    let path = claims.path.split('/').collect::<Vec<&str>>();
+    if path.len() != 3 {
+        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
+    }
+    let prefix = path[1].to_string();
+    let file_name = path[2].to_string();
     put_object(multipart, state, prefix, file_name).await
 }
 
@@ -96,7 +109,7 @@ where
 pub mod tests {
     use std::sync::Arc;
 
-    use crate::{app::MockAppStateOperations, config::Config};
+    use crate::{app::MockAppStateOperations, config::Config, signed_url::extractor::Claims};
     use axum::{Router, routing::put};
     use axum_test::{
         TestServer,
@@ -132,6 +145,10 @@ pub mod tests {
             .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
+
+        operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
 
@@ -145,7 +162,10 @@ pub mod tests {
         let form = build_multipart(BYTES, FILE_NAME, CONTENT_TYPE);
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
-        let response = client.put("/test-bucket/index.html").multipart(form).await;
+        let response = client
+            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
+            .multipart(form)
+            .await;
 
         insta::assert_debug_snapshot!(response);
     }
@@ -158,6 +178,10 @@ pub mod tests {
             .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
+
+        operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
 
@@ -165,7 +189,9 @@ pub mod tests {
         let router = fake_router(app_state);
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
-        let response = client.put("/test-bucket/index.html").await;
+        let response = client
+            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
+            .await;
 
         response.assert_status(StatusCode::BAD_REQUEST);
         response.assert_text("Invalid `boundary` for `multipart/form-data` request");
@@ -177,6 +203,10 @@ pub mod tests {
         operations
             .expect_upload()
             .returning(|_, _, _| Ok("Uploaded".to_string()));
+
+        operations
+            .expect_verify_parts()
+            .returning(|_| Ok(Claims::default()));
 
         operations
             .expect_config()
@@ -192,7 +222,10 @@ pub mod tests {
         let form = build_multipart(BYTES, FILE_NAME, CONTENT_TYPE);
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
-        let response = client.put("/test-bucket/index.html").multipart(form).await;
+        let response = client
+            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
+            .multipart(form)
+            .await;
 
         response.assert_status(StatusCode::OK);
     }

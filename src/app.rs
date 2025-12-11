@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
+use http::request::Parts;
 use mockall::automock;
 
 use crate::{
     config::Config,
     plumbing::ContentService,
     s3::{S3, S3Error},
-    signed_url::service::{AvailableActions, HMACUrlService, SignedUrlError, SignedUrlService},
+    signed_url::{
+        extractor::Claims,
+        service::{AvailableActions, HMACUrlService, SignedUrlError, SignedUrlService},
+    },
 };
 
 #[automock]
@@ -20,9 +24,8 @@ pub trait AppStateOperations {
         action: AvailableActions,
         expires_in_ms: u64,
     ) -> Result<String, SignedUrlError>;
-    #[allow(dead_code)]
-    fn verify_url(&self, url: &str) -> Result<(), SignedUrlError>;
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
+    fn verify_parts(&self, parts: Parts) -> Result<Claims, SignedUrlError>;
 }
 
 #[derive(Clone)]
@@ -68,8 +71,8 @@ impl AppStateOperations for AppState {
         self.signer.sign_url(prefix, action, expires_in_ms)
     }
 
-    fn verify_url(&self, url: &str) -> Result<(), SignedUrlError> {
-        self.signer.verify_url(url)
+    fn verify_parts(&self, parts: Parts) -> Result<Claims, SignedUrlError> {
+        self.signer.verify_parts(parts)
     }
 
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
@@ -116,8 +119,8 @@ pub mod tests {
             self.0.sign_url(prefix, action, expires_in_ms)
         }
 
-        fn verify_url(&self, url: &str) -> Result<(), SignedUrlError> {
-            self.0.verify_url(url)
+        fn verify_parts(&self, parts: Parts) -> Result<Claims, SignedUrlError> {
+            self.0.verify_parts(parts)
         }
 
         async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
