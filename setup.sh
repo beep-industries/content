@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+update_env_var() {
+	local key=$1
+	local value=$2
+	local env_file=".env"
+
+	if [ ! -f "$env_file" ]; then
+		echo "$key=$value" >> "$env_file"
+	elif grep -q "^${key}=" "$env_file"; then
+		sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+	else
+		echo "$key=$value" >> "$env_file"
+	fi
+}
+
 create_buckets() {
 		BUCKETS=("beep" "test")
 		for bucket in ${BUCKETS[@]}; do
@@ -22,8 +36,8 @@ function create_keys {
 						docker exec -t $CONTAINER_ID /garage bucket allow --read --write --owner $bucket --key $bucket"_admin" > /dev/null
 						if [ "$bucket" == "beep" ]; then
 								if [ "$WRITE_ENV" == "true" ]; then
-										echo "KEY_ID=$KEY_ID" >> .env
-										echo "SECRET_KEY=$SECRET_KEY" >> .env
+										update_env_var "KEY_ID" "$KEY_ID"
+										update_env_var "SECRET_KEY" "$SECRET_KEY"
 								fi
 								echo "KEY_ID=$KEY_ID"
 								echo "SECRET_KEY=$SECRET_KEY"
@@ -31,8 +45,8 @@ function create_keys {
 
 						if [ "$bucket" == "test" ]; then
 								if [ "$WRITE_ENV" == "true" ]; then
-										echo "TEST_KEY_ID=$KEY_ID" >> .env
-										echo "TEST_SECRET_KEY=$SECRET_KEY" >> .env
+										update_env_var "TEST_KEY_ID" "$KEY_ID"
+										update_env_var "TEST_SECRET_KEY" "$SECRET_KEY"
 								fi
 								echo "TEST_KEY_ID=$KEY_ID"
 								echo "TEST_SECRET_KEY=$SECRET_KEY"
@@ -82,7 +96,7 @@ function setup_signing_key {
 		SIGNING_KEY=$(cat /dev/random | head -c 20 | base64)
 		echo "SIGNING_KEY=$SIGNING_KEY"
 		if [ "$WRITE_ENV" == "true" ]; then
-				echo "SIGNING_KEY=$SIGNING_KEY" >> .env
+				update_env_var "SIGNING_KEY" "$SIGNING_KEY"
 		fi
 }
 

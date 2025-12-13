@@ -54,7 +54,7 @@ mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));

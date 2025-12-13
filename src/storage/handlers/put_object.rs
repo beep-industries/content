@@ -81,11 +81,18 @@ async fn put_object<S>(
 where
     S: AppStateOperations + Send + Sync + 'static,
 {
-    let field = multipart
+    let Some(field) = multipart
         .next_field()
         .await
         .map_err(|_| ApiError::BadRequest("Empty request".to_string()))?
-        .ok_or_else(|| ApiError::BadRequest("No file".to_string()))?;
+    else {
+        return Err(ApiError::BadRequest("No file".to_string()));
+    };
+
+    let content_type = field
+        .content_type()
+        .unwrap_or("application/octet-stream")
+        .to_string();
 
     let chunk_data = field
         .bytes()
@@ -98,7 +105,7 @@ where
     let key = format!("{}/{}", prefix, file_name);
 
     state
-        .upload(&bucket, &key, chunk_data.clone())
+        .upload(&bucket, &key, chunk_data.clone(), &content_type)
         .await
         .map_err(|e| e.into())?;
 
@@ -146,7 +153,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
@@ -182,7 +189,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
 
         operations
             .expect_verify_parts()
@@ -209,7 +216,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
