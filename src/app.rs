@@ -16,7 +16,13 @@ use crate::{
 #[automock]
 pub trait AppStateOperations {
     fn config(&self) -> Arc<Config>;
-    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error>;
+    async fn upload(
+        &self,
+        bucket: &str,
+        key: &str,
+        body: Vec<u8>,
+        content_type: &str,
+    ) -> Result<String, S3Error>;
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
     fn sign_url(
         &self,
@@ -54,8 +60,17 @@ impl AppStateOperations for AppState {
         self.config.clone()
     }
 
-    async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
-        self.service.s3.put_object(bucket, key, body).await
+    async fn upload(
+        &self,
+        bucket: &str,
+        key: &str,
+        body: Vec<u8>,
+        content_type: &str,
+    ) -> Result<String, S3Error> {
+        self.service
+            .s3
+            .put_object(bucket, key, body, content_type)
+            .await
     }
 
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
@@ -102,8 +117,14 @@ pub mod tests {
             self.0.config()
         }
 
-        async fn upload(&self, bucket: &str, key: &str, body: Vec<u8>) -> Result<String, S3Error> {
-            self.0.upload(bucket, key, body).await
+        async fn upload(
+            &self,
+            bucket: &str,
+            key: &str,
+            body: Vec<u8>,
+            content_type: &str,
+        ) -> Result<String, S3Error> {
+            self.0.upload(bucket, key, body, content_type).await
         }
 
         async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
