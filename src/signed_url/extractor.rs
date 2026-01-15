@@ -7,7 +7,8 @@ use axum::extract::FromRequestParts;
 #[derive(Debug, Clone, Default)]
 pub struct Claims {
     pub action: AvailableActions,
-    pub path: String,
+    // We consider a signed url to be only valid if its made of a path and a file name
+    pub path: (String, String),
 }
 
 #[derive(Debug, Clone)]

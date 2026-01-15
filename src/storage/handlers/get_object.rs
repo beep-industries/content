@@ -23,12 +23,7 @@ pub async fn get_object_handler(
     State(state): State<AppState>,
     SignedUrl(claims): SignedUrl,
 ) -> Result<Response<Body>, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -51,12 +46,7 @@ pub async fn get_object_test(
     SignedUrl(claims): SignedUrl,
     State(state): State<TestAppState>,
 ) -> Result<Response<Body>, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -92,7 +82,7 @@ mod tests {
             .returning(|_, _| Ok((vec![1, 2, 3], "text/plain".to_string())));
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });

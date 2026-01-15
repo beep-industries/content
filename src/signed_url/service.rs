@@ -205,8 +205,17 @@ where
             return Err(SignedUrlError::Expired);
         }
         let action = parsed_params.action;
-        let path = prefix.to_string();
-        Ok(Claims { action, path })
+        let prefix = prefix.trim_start_matches('/');
+        let path = prefix.split_once('/').unwrap_or((prefix, ""));
+        if path.1.is_empty() {
+            return Err(SignedUrlError::InvalidBaseUrl(
+                "Path is invalid".to_string(),
+            ));
+        }
+        Ok(Claims {
+            action,
+            path: (path.0.to_string(), path.1.to_string()),
+        })
     }
 
     fn verify_parts(&self, parts: http::request::Parts) -> Result<Claims, SignedUrlError> {
@@ -261,7 +270,7 @@ mod tests {
         let time = get_time();
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
             .expect("Invalid signer");
-        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let url = sign_url("/test/test".to_string(), AvailableActions::Put, 100);
         let params = service.verify_url(&url);
         assert!(params.is_ok());
     }
@@ -272,7 +281,7 @@ mod tests {
         let time = get_time();
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
             .expect("Invalid signer");
-        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let url = sign_url("/bucket/test".to_string(), AvailableActions::Put, 100);
         let request = Request::builder()
             .uri(url)
             .method(http::Method::PUT)
@@ -285,7 +294,7 @@ mod tests {
         let params = service.verify_parts(parts);
         assert!(params.is_ok());
         let params = params.unwrap();
-        assert_eq!(params.path, "/test");
+        assert_eq!(params.path, ("bucket".to_string(), "test".to_string()));
         assert_eq!(params.action, AvailableActions::Put);
     }
 

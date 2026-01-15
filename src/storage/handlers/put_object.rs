@@ -36,12 +36,7 @@ pub async fn put_object_handler(
     SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     put_object(multipart, state, prefix, file_name).await
 }
 
@@ -51,12 +46,7 @@ pub async fn put_object_test(
     SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     put_object(multipart, state, prefix, file_name).await
 }
 
@@ -157,7 +147,7 @@ pub mod tests {
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });
@@ -220,7 +210,7 @@ pub mod tests {
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });
