@@ -9,8 +9,7 @@ use utoipa::ToSchema;
 use crate::app::tests::TestAppState;
 use crate::{
     app::{AppState, AppStateOperations},
-    error::ApiError,
-    signed_url::service::AvailableActions,
+    signed_url::service::{AvailableActions, SignedUrlError},
 };
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -28,13 +27,12 @@ fn post_sign_url<S>(
     path: String,
     request: SignUrlRequest,
     state: S,
-) -> Result<SignUrlResponse, ApiError>
+) -> Result<SignUrlResponse, SignedUrlError>
 where
     S: AppStateOperations + Send + Sync + 'static,
 {
-    let url = state
-        .sign_url(path, request.action, request.expires_in_ms)
-        .map_err(|e| e.into())?;
+    let url = state.sign_url(path, request.action, request.expires_in_ms)?;
+
     Ok(SignUrlResponse { url })
 }
 
@@ -57,7 +55,7 @@ pub async fn post_sign_url_handler(
     Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<AppState>,
     Json(request): Json<SignUrlRequest>,
-) -> Result<Json<SignUrlResponse>, ApiError> {
+) -> Result<Json<SignUrlResponse>, SignedUrlError> {
     Ok(Json(post_sign_url(
         format!("{}/{}", prefix, file_name),
         request,
@@ -70,7 +68,7 @@ pub async fn post_sign_url_test(
     Path((prefix, file_name)): Path<(String, String)>,
     State(state): State<TestAppState>,
     Json(request): Json<SignUrlRequest>,
-) -> Result<Json<SignUrlResponse>, ApiError> {
+) -> Result<Json<SignUrlResponse>, SignedUrlError> {
     Ok(Json(post_sign_url(
         format!("{}/{}", prefix, file_name),
         request,

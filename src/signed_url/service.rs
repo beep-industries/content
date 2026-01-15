@@ -1,38 +1,27 @@
-use std::{
-    fmt::{Display, Formatter},
-    path::Path,
-};
+use std::path::Path;
 
 use axum::response::IntoResponse;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use http::{StatusCode, Uri, uri::Scheme};
 use mockall::automock;
 use serde::{Deserialize, Serialize};
+use strum_macros::Display;
+use thiserror::Error;
 use utoipa::ToSchema;
 
 use crate::{
-    error::{ApiError, CoreError},
+    error::CoreError,
     signed_url::extractor::Claims,
     signer::{HMACSigner, Signer},
     utils::{RealTime, Time},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Copy, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Copy, Default, Display)]
 pub enum AvailableActions {
     #[default]
     Put,
     Get,
     Delete,
-}
-
-impl Display for AvailableActions {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AvailableActions::Put => write!(f, "Put"),
-            AvailableActions::Get => write!(f, "Get"),
-            AvailableActions::Delete => write!(f, "Delete"),
-        }
-    }
 }
 
 impl From<AvailableActions> for http::Method {
@@ -54,38 +43,14 @@ pub struct SignedURLParams {
 
 pub type HMACUrlService = SignedUrlServiceImpl<HMACSigner, RealTime>;
 
-#[derive(Debug)]
+#[derive(Debug, Error, strum_macros::Display)]
 pub enum SignedUrlError {
-    #[allow(dead_code)]
     MissingQueryParams(String),
-    #[allow(dead_code)]
     InvalidEncoding,
     InvalidBaseUrl(String),
-    #[allow(dead_code)]
     InternalError(String),
-    #[allow(dead_code)]
     Expired,
-    #[allow(dead_code)]
     InvalidSignature,
-    #[allow(dead_code)]
-    Unauthorized,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<ApiError> for SignedUrlError {
-    fn into(self) -> ApiError {
-        match self {
-            SignedUrlError::MissingQueryParams(e) => ApiError::BadRequest(e),
-            SignedUrlError::InvalidEncoding => ApiError::BadRequest("Invalid encoding".to_string()),
-            SignedUrlError::InvalidBaseUrl(e) => ApiError::BadRequest(e),
-            SignedUrlError::InternalError(e) => ApiError::InternalServerError(e),
-            SignedUrlError::Expired => ApiError::Unauthorized("Expired".to_string()),
-            SignedUrlError::InvalidSignature => {
-                ApiError::Unauthorized("Invalid signature".to_string())
-            }
-            SignedUrlError::Unauthorized => ApiError::Unauthorized("Unauthorized".to_string()),
-        }
-    }
 }
 
 impl IntoResponse for SignedUrlError {
@@ -97,23 +62,8 @@ impl IntoResponse for SignedUrlError {
             SignedUrlError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             SignedUrlError::Expired => StatusCode::UNAUTHORIZED,
             SignedUrlError::InvalidSignature => StatusCode::UNAUTHORIZED,
-            SignedUrlError::Unauthorized => StatusCode::UNAUTHORIZED,
         };
         (status, self.to_string()).into_response()
-    }
-}
-
-impl Display for SignedUrlError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SignedUrlError::MissingQueryParams(e) => write!(f, "{}", e),
-            SignedUrlError::InvalidEncoding => write!(f, "Invalid encoding"),
-            SignedUrlError::InvalidBaseUrl(e) => write!(f, "{}", e),
-            SignedUrlError::InternalError(e) => write!(f, "{}", e),
-            SignedUrlError::Expired => write!(f, "Expired"),
-            SignedUrlError::InvalidSignature => write!(f, "Invalid signature"),
-            SignedUrlError::Unauthorized => write!(f, "Unauthorized"),
-        }
     }
 }
 
