@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tracing::info;
+
 use crate::{
     app::AppState, config::Config, error::CoreError, guards::GuardsBuilder,
     plumbing::create_service, signed_url::service::HMACUrlService, signer::HMACSigner,
@@ -61,6 +63,7 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
         .await
         .map_err(|e| CoreError::HttpServer(e.to_string()))?;
 
+    info!("Starting server on {}", config.base_url);
     let _ = crate::http::serve(root, config)
         .await
         .inspect_err(|e| eprintln!("{}", e));

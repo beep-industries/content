@@ -1,4 +1,4 @@
-use axum::extract::{Multipart, State};
+use axum::{body::Bytes, extract::State, http::HeaderMap, http::header::CONTENT_TYPE};
 use utoipa::ToSchema;
 
 #[cfg(test)]
@@ -24,7 +24,7 @@ struct UploadRequest {
         ("prefix" = String, Path, description = "Bucket prefix"),
         ("file_name" = String, Path, description = "File name"),
     ),
-    request_body(content = UploadRequest, content_type = "multipart/form-data"),
+    request_body(content = UploadRequest, content_type = "application/octet-stream"),
     responses(
         (status = 200, description = "Upload successful", body = String),
         (status = 400, description = "Invalid request", body = String),
@@ -34,23 +34,25 @@ struct UploadRequest {
 pub async fn put_object_handler(
     State(state): State<AppState>,
     SignedUrl(claims): SignedUrl,
-    multipart: Multipart,
+    headers: HeaderMap,
+    body: Bytes,
 ) -> Result<String, ApiError> {
     let (prefix, file_name) = claims.path;
-    put_object(multipart, state, prefix, file_name).await
+    put_object(body, headers, state, prefix, file_name).await
 }
 
 #[cfg(test)]
 pub async fn put_object_test(
     State(state): State<TestAppState>,
     SignedUrl(claims): SignedUrl,
-    multipart: Multipart,
+    headers: HeaderMap,
+    body: Bytes,
 ) -> Result<String, ApiError> {
     let (prefix, file_name) = claims.path;
-    put_object(multipart, state, prefix, file_name).await
+    put_object(body, headers, state, prefix, file_name).await
 }
 
-/// Uploads a file from a multipart request to S3.
+/// Uploads a file from a raw binary request to S3.
 /// The output of this method when successful is just a string "Uploaded"
 /// confirming that the file was uploaded successfully.
 ///
@@ -63,7 +65,8 @@ pub async fn put_object_test(
 ///     .with_state(app_state);
 /// ```
 async fn put_object<S>(
-    mut multipart: Multipart,
+    body: Bytes,
+    headers: HeaderMap,
     state: S,
     prefix: String,
     file_name: String,
@@ -71,13 +74,10 @@ async fn put_object<S>(
 where
     S: AppStateOperations + Send + Sync + 'static,
 {
-    let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|_| ApiError::BadRequest("Empty request".to_string()))?
-    else {
-        return Err(ApiError::BadRequest("No file".to_string()));
-    };
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
 
     let bucket = state.config().s3_bucket.clone();
 
@@ -85,8 +85,7 @@ where
 
     let file = state
         .guards()
-        .check(&prefix, &key, field)
-        .await
+        .check(&prefix, &key, body.to_vec(), content_type)
         .map_err(|e| e.into())?;
 
     state
@@ -108,25 +107,10 @@ pub mod tests {
         signed_url::{extractor::Claims, service::AvailableActions},
     };
     use axum::{Router, routing::put};
-    use axum_test::{
-        TestServer,
-        multipart::{MultipartForm, Part},
-    };
+    use axum_test::TestServer;
     use reqwest::StatusCode;
 
     use super::*;
-
-    pub fn build_multipart(
-        content: &'static [u8],
-        file_name: &str,
-        content_type: &str,
-    ) -> MultipartForm {
-        let part = Part::bytes(content)
-            .file_name(file_name)
-            .mime_type(content_type);
-
-        MultipartForm::new().add_part("file", part)
-    }
 
     pub fn fake_router(app_state: TestAppState) -> Router {
         Router::new()
@@ -164,57 +148,20 @@ pub mod tests {
         let router = fake_router(app_state);
 
         const BYTES: &[u8] = "<!doctype html><html><body>Hello World</body></html>".as_bytes();
-        const FILE_NAME: &str = "index.html";
         const CONTENT_TYPE: &str = "text/html; charset=utf-8";
-
-        let form = build_multipart(BYTES, FILE_NAME, CONTENT_TYPE);
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
         let response = client
             .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
-            .multipart(form)
+            .content_type(CONTENT_TYPE)
+            .bytes(BYTES.into())
             .await;
 
         insta::assert_debug_snapshot!(response);
     }
 
     #[tokio::test]
-    async fn test_put_object_empty_request() {
-        let mut operations = MockAppStateOperations::new();
-        operations
-            .expect_upload()
-            .returning(|_, _, _| Ok("Uploaded".to_string()));
-
-        operations
-            .expect_verify_parts()
-            .returning(|_| Ok(Claims::default()));
-
-        operations.expect_guards().returning(|| {
-            Arc::new(
-                GuardsBuilder::new()
-                    .add("test-bucket", Guard::new(vec![FileType::ImageJPEG]))
-                    .build(),
-            )
-        });
-
-        operations
-            .expect_config()
-            .returning(|| Arc::new(Config::default()));
-
-        let app_state = TestAppState::new(operations);
-        let router = fake_router(app_state);
-
-        let client = TestServer::new(router).expect("Axum test server creation failed");
-        let response = client
-            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
-            .await;
-
-        response.assert_status(StatusCode::BAD_REQUEST);
-        response.assert_text("Invalid `boundary` for `multipart/form-data` request");
-    }
-
-    #[tokio::test]
-    async fn test_put_object_empty_part() {
+    async fn test_put_object_empty_body() {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
@@ -242,16 +189,13 @@ pub mod tests {
         let app_state = TestAppState::new(operations);
         let router = fake_router(app_state);
 
-        const BYTES: &[u8] = "".as_bytes();
-        const FILE_NAME: &str = "index.html";
         const CONTENT_TYPE: &str = "text/html; charset=utf-8";
-
-        let form = build_multipart(BYTES, FILE_NAME, CONTENT_TYPE);
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
         let response = client
             .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
-            .multipart(form)
+            .content_type(CONTENT_TYPE)
+            .bytes(vec![].into())
             .await;
 
         response.assert_status(StatusCode::OK);

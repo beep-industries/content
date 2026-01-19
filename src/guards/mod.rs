@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use axum::extract::multipart::Field;
-
 use crate::{error::ApiError, s3::FileObject};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -73,7 +71,6 @@ impl Into<ApiError> for GuardError {
             GuardError::WrongFileExtension => {
                 ApiError::BadRequest("Wrong file extension".to_string())
             }
-            GuardError::InternalServerError(e) => ApiError::InternalServerError(e),
             GuardError::NoGuardFound => ApiError::InternalServerError("No guard found".to_string()),
         }
     }
@@ -87,7 +84,6 @@ pub enum GuardError {
     MissingFileExtension,
     WrongFileExtension,
     NoGuardFound,
-    InternalServerError(String),
 }
 
 #[derive(Clone, Debug)]
@@ -104,26 +100,19 @@ impl Guard {
         Self { allowed_file_types }
     }
 
-    pub async fn check(&self, field: Field<'_>, file_name: &str) -> Result<FileObject, GuardError> {
-        let content_type = field
-            .content_type()
-            .unwrap_or("application/octet-stream")
-            .to_string();
-
-        let chunk_data = field
-            .bytes()
-            .await
-            .map_err(|e| GuardError::InternalServerError(e.to_string()))?
-            .to_vec();
+    pub fn check(
+        &self,
+        data: Vec<u8>,
+        content_type: &str,
+        file_name: &str,
+    ) -> Result<FileObject, GuardError> {
+        let content_type = content_type.to_string();
 
         if self.allowed_file_types.contains(&FileType::Any) {
-            return Ok(FileObject {
-                data: chunk_data,
-                content_type,
-            });
+            return Ok(FileObject { data, content_type });
         }
 
-        let kind = infer::get(&chunk_data);
+        let kind = infer::get(&data);
 
         match kind {
             Some(kind) => {
@@ -152,10 +141,7 @@ impl Guard {
             }
         }
 
-        Ok(FileObject {
-            content_type,
-            data: chunk_data,
-        })
+        Ok(FileObject { content_type, data })
     }
 }
 
@@ -182,15 +168,16 @@ impl GuardsBuilder {
 }
 
 impl Guards {
-    pub async fn check(
+    pub fn check(
         &self,
         destination: &str,
         file_name: &str,
-        field: Field<'_>,
+        data: Vec<u8>,
+        content_type: &str,
     ) -> Result<FileObject, GuardError> {
         let guard = self.map.get(destination);
         let file = match guard {
-            Some(guard) => guard.check(field, file_name).await,
+            Some(guard) => guard.check(data, content_type, file_name),
             None => Err(GuardError::NoGuardFound),
         }?;
         Ok(file)
@@ -199,115 +186,62 @@ impl Guards {
 
 #[cfg(test)]
 mod tests {
-    use axum::{Router, extract::Multipart, response::IntoResponse, routing::post};
-    use axum_test::TestServer;
-
-    use crate::storage::handlers::put_object::tests::build_multipart;
-
     use super::*;
 
-    #[tokio::test]
-    async fn test_guard_happy_path() {
-        let buf: &[u8] = &[0xFF, 0xD8, 0xFF, 0xAA];
+    #[test]
+    fn test_guard_happy_path() {
+        let buf: Vec<u8> = vec![0xFF, 0xD8, 0xFF, 0xAA];
         const FILE_NAME: &str = "index.jpg";
         const CONTENT_TYPE: &str = "image/jpeg";
 
-        let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
+        let guards = GuardsBuilder::new()
+            .add(
+                "test",
+                Guard {
+                    allowed_file_types: vec![FileType::ImageJPEG],
+                },
+            )
+            .build();
 
-        async fn handle_happy_path(mut multipart: Multipart) -> impl IntoResponse {
-            let field = multipart
-                .next_field()
-                .await
-                .expect("Invalid field")
-                .expect("Invalid field");
-            let guards = GuardsBuilder::new()
-                .add(
-                    "test",
-                    Guard {
-                        allowed_file_types: vec![FileType::ImageJPEG],
-                    },
-                )
-                .build();
-
-            let file = guards.check("test", "index.jpg", field).await;
-            insta::assert_debug_snapshot!(file);
-        }
-
-        let app = Router::new().route("/test/index.jpg", post(handle_happy_path));
-        let client = TestServer::new(app).expect("Axum test server creation failed");
-
-        let response = client.post("/test/index.jpg").multipart(form).await;
-
-        response.assert_status_ok();
+        let file = guards.check("test", FILE_NAME, buf, CONTENT_TYPE);
+        insta::assert_debug_snapshot!(file);
     }
 
-    #[tokio::test]
-    async fn test_guard_any_files() {
-        let buf: &[u8] = "test file".as_bytes();
+    #[test]
+    fn test_guard_any_files() {
+        let buf: Vec<u8> = "test file".as_bytes().to_vec();
         const FILE_NAME: &str = "index.html";
         const CONTENT_TYPE: &str = "text/html";
 
-        let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
+        let guards = GuardsBuilder::new()
+            .add(
+                "test",
+                Guard {
+                    allowed_file_types: vec![FileType::Any],
+                },
+            )
+            .build();
 
-        async fn handle_any_files(mut multipart: Multipart) -> impl IntoResponse {
-            let field = multipart
-                .next_field()
-                .await
-                .expect("Invalid field")
-                .expect("Invalid field");
-            let guards = GuardsBuilder::new()
-                .add(
-                    "test",
-                    Guard {
-                        allowed_file_types: vec![FileType::Any],
-                    },
-                )
-                .build();
-
-            let file = guards.check("test", "index.html", field).await;
-            insta::assert_debug_snapshot!(file);
-        }
-
-        let app = Router::new().route("/test/index.html", post(handle_any_files));
-        let client = TestServer::new(app).expect("Axum test server creation failed");
-
-        let response = client.post("/test/index.html").multipart(form).await;
-
-        response.assert_status_ok();
+        let file = guards.check("test", FILE_NAME, buf, CONTENT_TYPE);
+        insta::assert_debug_snapshot!(file);
     }
 
-    #[tokio::test]
-    async fn test_guard_file_confusion() {
-        let buf: &[u8] = "<svg id='x' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='1337' height='1337'><image href='1' onerror='alert(window.origin)' /></svg>".as_bytes();
+    #[test]
+    fn test_guard_file_confusion() {
+        let buf: Vec<u8> = "<svg id='x' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='1337' height='1337'><image href='1' onerror='alert(window.origin)' /></svg>".as_bytes().to_vec();
         const FILE_NAME: &str = "index.svg";
         const CONTENT_TYPE: &str = "application/octet-stream";
 
-        let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
+        let guards = GuardsBuilder::new()
+            .add(
+                "test",
+                Guard {
+                    allowed_file_types: vec![FileType::ImagePNG],
+                },
+            )
+            .build();
 
-        async fn handle_file_confusion(mut multipart: Multipart) -> impl IntoResponse {
-            let field = multipart
-                .next_field()
-                .await
-                .expect("Invalid field")
-                .expect("Invalid field");
-            let guards = GuardsBuilder::new()
-                .add(
-                    "test",
-                    Guard {
-                        allowed_file_types: vec![FileType::ImagePNG],
-                    },
-                )
-                .build();
-
-            let file = guards.check("test", "index.svg", field).await;
-            insta::assert_debug_snapshot!(file);
-        }
-
-        let app = Router::new().route("/test/index.svg", post(handle_file_confusion));
-        let client = TestServer::new(app).expect("Axum test server creation failed");
-
-        let response = client.post("/test/index.svg").multipart(form).await;
-
-        response.assert_status_ok();
+        let file = guards.check("test", FILE_NAME, buf, CONTENT_TYPE);
+        insta::assert_debug_snapshot!(file);
     }
 }

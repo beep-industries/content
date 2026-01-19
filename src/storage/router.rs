@@ -45,7 +45,7 @@ mod tests {
         config::Config,
         guards::{FileType, Guard, GuardsBuilder},
         signed_url::{extractor::Claims, service::AvailableActions},
-        storage::handlers::{post_object::SignUrlRequest, put_object::tests::build_multipart},
+        storage::handlers::post_object::SignUrlRequest,
     };
 
     use super::*;
@@ -77,13 +77,13 @@ mod tests {
         let router = storage_router_test(app_state);
 
         const BYTES: &[u8] = "<!doctype html><html><body>Hello World</body></html>".as_bytes();
-
-        let form = build_multipart(BYTES, "index.html", "text/html");
+        const CONTENT_TYPE: &str = "text/html";
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
             .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
-            .multipart(form)
+            .content_type(CONTENT_TYPE)
+            .bytes(BYTES.into())
             .await;
 
         insta::assert_debug_snapshot!(response);
