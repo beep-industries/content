@@ -214,7 +214,7 @@ mod tests {
 
         let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
 
-        async fn handle(mut multipart: Multipart) -> impl IntoResponse {
+        async fn handle_happy_path(mut multipart: Multipart) -> impl IntoResponse {
             let field = multipart
                 .next_field()
                 .await
@@ -233,7 +233,7 @@ mod tests {
             insta::assert_debug_snapshot!(file);
         }
 
-        let app = Router::new().route("/test/index.jpg", post(handle));
+        let app = Router::new().route("/test/index.jpg", post(handle_happy_path));
         let client = TestServer::new(app).expect("Axum test server creation failed");
 
         let response = client.post("/test/index.jpg").multipart(form).await;
@@ -249,7 +249,7 @@ mod tests {
 
         let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
 
-        async fn handle(mut multipart: Multipart) -> impl IntoResponse {
+        async fn handle_any_files(mut multipart: Multipart) -> impl IntoResponse {
             let field = multipart
                 .next_field()
                 .await
@@ -268,7 +268,7 @@ mod tests {
             insta::assert_debug_snapshot!(file);
         }
 
-        let app = Router::new().route("/test/index.html", post(handle));
+        let app = Router::new().route("/test/index.html", post(handle_any_files));
         let client = TestServer::new(app).expect("Axum test server creation failed");
 
         let response = client.post("/test/index.html").multipart(form).await;
@@ -284,7 +284,7 @@ mod tests {
 
         let form = build_multipart(buf, FILE_NAME, CONTENT_TYPE);
 
-        async fn handle(mut multipart: Multipart) -> impl IntoResponse {
+        async fn handle_file_confusion(mut multipart: Multipart) -> impl IntoResponse {
             let field = multipart
                 .next_field()
                 .await
@@ -303,7 +303,7 @@ mod tests {
             insta::assert_debug_snapshot!(file);
         }
 
-        let app = Router::new().route("/test/index.svg", post(handle));
+        let app = Router::new().route("/test/index.svg", post(handle_file_confusion));
         let client = TestServer::new(app).expect("Axum test server creation failed");
 
         let response = client.post("/test/index.svg").multipart(form).await;

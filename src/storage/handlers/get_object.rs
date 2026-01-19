@@ -13,6 +13,10 @@ use crate::{
     get,
     path = "/{prefix}/{file_name}",
     tag = "storage",
+    params(
+        ("prefix" = String, Path, description = "Bucket prefix"),
+        ("file_name" = String, Path, description = "File name"),
+    ),
     responses(
         (status = 200, description = "Upload successful", body = String),
         (status = 400, description = "Invalid request", body = String),

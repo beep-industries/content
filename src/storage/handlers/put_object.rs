@@ -104,6 +104,7 @@ pub mod tests {
     use crate::{
         app::MockAppStateOperations,
         config::Config,
+        guards::{FileType, Guard, GuardsBuilder},
         signed_url::{extractor::Claims, service::AvailableActions},
     };
     use axum::{Router, routing::put};
@@ -147,6 +148,14 @@ pub mod tests {
             })
         });
 
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .build(),
+            )
+        });
+
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
@@ -179,6 +188,14 @@ pub mod tests {
         operations
             .expect_verify_parts()
             .returning(|_| Ok(Claims::default()));
+
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::ImageJPEG]))
+                    .build(),
+            )
+        });
 
         operations
             .expect_config()
@@ -213,6 +230,14 @@ pub mod tests {
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .build(),
+            )
+        });
 
         let app_state = TestAppState::new(operations);
         let router = fake_router(app_state);
