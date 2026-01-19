@@ -38,22 +38,53 @@ To install it, run:
 cargo install cargo-insta
 ```
 
-To run the unit tests, you can use the following command:
+### Test structure
+
+Tests are organized into two categories:
+
+| Type | Location | Description |
+|------|----------|-------------|
+| Unit tests | `src/**/*.rs` | Tests that don't require external services |
+| Integration tests | `src/integrations/` and `tests/integrations.rs` | Tests that require a running S3 bucket |
+
+### Running tests
+
+| Command | What it runs |
+|---------|-------------|
+| `cargo test` | All tests (unit + integration) |
+| `cargo test -- integration` | Only integration tests |
+| `cargo test --lib -- --skip integration` | Only unit tests |
+
+To run all tests:
 
 ```bash
 cargo test
 ```
 
-If your tests outputs are different from the snapshots, you can update the snapshots by running:
+To run only unit tests (no S3 required):
+
+```bash
+cargo test --lib -- --skip integration
+```
+
+To run only integration tests (requires S3):
+
+```bash
+cargo test -- integration
+```
+
+Integration tests require a running S3 instance. Make sure you have started the services:
+
+```bash
+docker compose up -d
+```
+
+### Updating snapshots
+
+If your test outputs are different from the snapshots, you can review and update them by running:
 
 ```bash
 cargo insta review
-```
-
-Integration tests are ignored by default locally but are run in the CI pipeline. These tests need a running S3 to be executed so make sure that you launched `docker compose up`. To run these tests locally : 
-
-```bash
-cargo test -- --ignored
 ```
 
 ## Traces & logs

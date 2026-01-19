@@ -27,7 +27,7 @@ mod guards;
 mod router_test;
 
 #[cfg(test)]
-mod it;
+mod integrations;
 
 pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
     let content_service =

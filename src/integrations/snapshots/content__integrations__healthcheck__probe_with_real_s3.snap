@@ -1,0 +1,28 @@
+---
+source: src/integrations/healthcheck.rs
+expression: response
+---
+TestResponse {
+    method: GET,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/health",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "application/json",
+        "content-length": "11",
+    },
+    status_code: 200,
+    response_body: b"{\"s3\":true}",
+}
