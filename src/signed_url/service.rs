@@ -286,14 +286,14 @@ mod tests {
             .uri(url)
             .method(http::Method::PUT)
             .body(axum::body::Body::empty())
-            .unwrap();
+            .expect("Invalid request");
 
         let parts = http::request::Parts::from_request(request, &())
             .await
             .expect("Invalid request");
         let params = service.verify_parts(parts);
         assert!(params.is_ok());
-        let params = params.unwrap();
+        let params = params.expect("Invalid params");
         assert_eq!(params.path, ("bucket".to_string(), "test".to_string()));
         assert_eq!(params.action, AvailableActions::Put);
     }
@@ -309,7 +309,7 @@ mod tests {
             .uri(url)
             .method(http::Method::GET)
             .body(axum::body::Body::empty())
-            .unwrap();
+            .expect("Invalid request");
 
         let parts = http::request::Parts::from_request(request, &())
             .await

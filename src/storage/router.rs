@@ -43,6 +43,7 @@ mod tests {
     use crate::{
         app::MockAppStateOperations,
         config::Config,
+        guards::{FileType, Guard, GuardsBuilder},
         signed_url::{extractor::Claims, service::AvailableActions},
         storage::handlers::{post_object::SignUrlRequest, put_object::tests::build_multipart},
     };
@@ -54,10 +55,17 @@ mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+
+        operations.expect_guards().returning(|| {
+            let guards = GuardsBuilder::new()
+                .add("test-bucket", Guard::new(vec![FileType::Any]))
+                .build();
+            Arc::new(guards)
+        });
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
@@ -74,7 +82,7 @@ mod tests {
 
         let response = TestServer::new(router)
             .expect("Axum test server creation failed")
-            .put("/beep/index.html?action=Put&expires=1684969600&signature=test")
+            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
             .multipart(form)
             .await;
 

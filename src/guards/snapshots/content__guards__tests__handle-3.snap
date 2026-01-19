@@ -1,0 +1,7 @@
+---
+source: src/guards/mod.rs
+expression: file
+---
+Err(
+    UnknownFileType,
+)

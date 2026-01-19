@@ -32,13 +32,16 @@ where
     S: AppStateOperations + Send + Sync + 'static,
 {
     let bucket = state.config().s3_bucket.clone();
-    let (object, mime_type) = state.get_object(&bucket, &path).await.unwrap();
+    let (object, mime_type) = state
+        .get_object(&bucket, &path)
+        .await
+        .map_err(|e| e.into())?;
     let body = Body::from(object);
-    Ok(Response::builder()
+    Response::builder()
         .status(200)
         .header("Content-Type", mime_type)
         .body(body)
-        .unwrap())
+        .map_err(|e| ApiError::InternalServerError(e.to_string()))
 }
 
 #[cfg(test)]

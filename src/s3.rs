@@ -13,8 +13,7 @@ pub trait S3: Send + Sync {
         &self,
         bucket: &str,
         key: &str,
-        body: Vec<u8>,
-        content_type: &str,
+        file: FileObject,
     ) -> Result<String, S3Error>;
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
@@ -54,16 +53,22 @@ impl S3 for Garage {
     ///     "key_id",
     ///     "secret_key",
     /// );
-    /// let res = s3.put_object("test", "test.txt", vec![1, 2, 3]).await;
+    /// let file = FileObject {
+    ///     data: vec![1, 2, 3],
+    ///     content_type: "application/octet-stream".to_string(),
+    ///     file_name: "test.txt".to_string(),
+    /// };
+    /// let res = s3.put_object("test", "test.txt", file).await;
     /// assert!(res.is_ok());
     /// ```
     async fn put_object(
         &self,
         bucket: &str,
         key: &str,
-        body: Vec<u8>,
-        content_type: &str,
+        file: FileObject,
     ) -> Result<String, S3Error> {
+        let body = file.data;
+        let content_type = file.content_type;
         let body_stream = aws_sdk_s3::primitives::ByteStream::from(body);
 
         self.client
@@ -188,6 +193,12 @@ impl Display for S3Error {
     }
 }
 
+#[derive(Debug)]
+pub struct FileObject {
+    pub data: Vec<u8>,
+    pub content_type: String,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::config::tests::bootstrap_integration_tests;
@@ -214,14 +225,11 @@ mod tests {
     #[ignore]
     async fn test_put_object() {
         let s3 = setup_s3();
-        let res = s3
-            .put_object(
-                "test",
-                "test.txt",
-                vec![1, 2, 3],
-                "application/octet-stream",
-            )
-            .await;
+        let file = FileObject {
+            data: vec![1, 2, 3],
+            content_type: "application/octet-stream".to_string(),
+        };
+        let res = s3.put_object("test", "test.txt", file).await;
         assert!(res.is_ok());
     }
 
@@ -229,14 +237,11 @@ mod tests {
     #[ignore]
     async fn test_get_object() {
         let s3 = setup_s3();
-        let _ = s3
-            .put_object(
-                "test",
-                "test2.txt",
-                vec![1, 2, 3],
-                "application/octet-stream",
-            )
-            .await;
+        let file = FileObject {
+            data: vec![1, 2, 3],
+            content_type: "application/octet-stream".to_string(),
+        };
+        let _ = s3.put_object("test", "test2.txt", file).await;
         let res = s3.get_object("test", "test2.txt").await;
         assert!(res.is_ok());
     }
@@ -245,13 +250,12 @@ mod tests {
     #[ignore]
     async fn test_mime_types_on_object() {
         let s3 = setup_s3();
+        let file = FileObject {
+            data: "test".as_bytes().to_vec(),
+            content_type: "text/plain".to_string(),
+        };
         let _ = s3
-            .put_object(
-                "test",
-                "test4.txt",
-                "test".as_bytes().to_vec(),
-                "text/plain",
-            )
+            .put_object("test", "test4.txt", file)
             .await
             .expect("should upload the file");
         let (_, mime_type) = s3

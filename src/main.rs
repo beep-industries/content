@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::error::CoreError;
 
+use crate::guards::GuardsBuilder;
 use crate::signed_url::service::HMACUrlService;
 use crate::signer::HMACSigner;
 use crate::utils::get_time;
@@ -23,6 +24,8 @@ mod signer;
 mod storage;
 mod telemetry;
 mod utils;
+
+mod guards;
 
 #[cfg(test)]
 mod router_test;
@@ -48,9 +51,18 @@ async fn main() -> Result<(), CoreError> {
             time,
             config.base_url.clone(),
         )
-        .unwrap(),
+        .map_err(|e| CoreError::SigningKeyError(e.to_string()))?,
     );
-    let app_state: AppState = AppState::new(content_service, config.clone(), signer_service);
+    let guards = Arc::new(
+        GuardsBuilder::new()
+            .add(
+                "profile_picture",
+                crate::guards::Guard::new(vec![crate::guards::FileType::ImageJPEG]),
+            )
+            .build(),
+    );
+    let app_state: AppState =
+        AppState::new(content_service, config.clone(), signer_service, guards);
     let root = router::app(app_state)
         .await
         .expect("Router initialization error");

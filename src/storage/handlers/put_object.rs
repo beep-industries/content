@@ -79,23 +79,18 @@ where
         return Err(ApiError::BadRequest("No file".to_string()));
     };
 
-    let content_type = field
-        .content_type()
-        .unwrap_or("application/octet-stream")
-        .to_string();
-
-    let chunk_data = field
-        .bytes()
-        .await
-        .map_err(|e| ApiError::InternalServerError(e.to_string()))?
-        .to_vec();
-
     let bucket = state.config().s3_bucket.clone();
 
     let key = format!("{}/{}", prefix, file_name);
 
+    let file = state
+        .guards()
+        .check(&prefix, &key, field)
+        .await
+        .map_err(|e| e.into())?;
+
     state
-        .upload(&bucket, &key, chunk_data.clone(), &content_type)
+        .upload(&bucket, &key, file)
         .await
         .map_err(|e| e.into())?;
 
@@ -143,7 +138,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
@@ -179,7 +174,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations
             .expect_verify_parts()
@@ -206,7 +201,7 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {

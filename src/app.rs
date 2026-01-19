@@ -5,8 +5,9 @@ use mockall::automock;
 
 use crate::{
     config::Config,
+    guards::Guards,
     plumbing::ContentService,
-    s3::{S3, S3Error},
+    s3::{FileObject, S3, S3Error},
     signed_url::{
         extractor::Claims,
         service::{AvailableActions, HMACUrlService, SignedUrlError, SignedUrlService},
@@ -16,13 +17,7 @@ use crate::{
 #[automock]
 pub trait AppStateOperations {
     fn config(&self) -> Arc<Config>;
-    async fn upload(
-        &self,
-        bucket: &str,
-        key: &str,
-        body: Vec<u8>,
-        content_type: &str,
-    ) -> Result<String, S3Error>;
+    async fn upload(&self, bucket: &str, key: &str, file: FileObject) -> Result<String, S3Error>;
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
     fn sign_url(
         &self,
@@ -32,6 +27,7 @@ pub trait AppStateOperations {
     ) -> Result<String, SignedUrlError>;
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
     fn verify_parts(&self, parts: Parts) -> Result<Claims, SignedUrlError>;
+    fn guards(&self) -> Arc<Guards>;
 }
 
 #[derive(Clone)]
@@ -39,6 +35,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub service: Arc<ContentService>,
     pub signer: Arc<HMACUrlService>,
+    pub guards: Arc<Guards>,
 }
 
 impl AppState {
@@ -46,11 +43,13 @@ impl AppState {
         service: Arc<ContentService>,
         args: Arc<Config>,
         signer: Arc<HMACUrlService>,
+        guards: Arc<Guards>,
     ) -> Self {
         Self {
             service,
             config: args,
             signer,
+            guards,
         }
     }
 }
@@ -60,17 +59,8 @@ impl AppStateOperations for AppState {
         self.config.clone()
     }
 
-    async fn upload(
-        &self,
-        bucket: &str,
-        key: &str,
-        body: Vec<u8>,
-        content_type: &str,
-    ) -> Result<String, S3Error> {
-        self.service
-            .s3
-            .put_object(bucket, key, body, content_type)
-            .await
+    async fn upload(&self, bucket: &str, key: &str, file: FileObject) -> Result<String, S3Error> {
+        self.service.s3.put_object(bucket, key, file).await
     }
 
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
@@ -92,6 +82,10 @@ impl AppStateOperations for AppState {
 
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
         self.service.s3.get_object(bucket, key).await
+    }
+
+    fn guards(&self) -> Arc<Guards> {
+        self.guards.clone()
     }
 }
 
@@ -121,10 +115,9 @@ pub mod tests {
             &self,
             bucket: &str,
             key: &str,
-            body: Vec<u8>,
-            content_type: &str,
+            file: FileObject,
         ) -> Result<String, S3Error> {
-            self.0.upload(bucket, key, body, content_type).await
+            self.0.upload(bucket, key, file).await
         }
 
         async fn show_buckets(&self) -> Result<Vec<String>, S3Error> {
@@ -146,6 +139,10 @@ pub mod tests {
 
         async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error> {
             self.0.get_object(bucket, key).await
+        }
+
+        fn guards(&self) -> Arc<Guards> {
+            self.0.guards()
         }
     }
 }
