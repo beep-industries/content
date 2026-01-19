@@ -1,5 +1,10 @@
-#!/bin/bash
+#!/bin/bash -i
 set -e
+
+shopt -s expand_aliases
+
+podman --version
+docker --version
 
 update_env_var() {
 	local key=$1
