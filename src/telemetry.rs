@@ -81,7 +81,7 @@ fn init_tracing_subscriber() -> Result<OtelGuard, TelemetryError> {
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::filter::LevelFilter::from_level(
-            Level::INFO,
+            Level::DEBUG,
         ))
         .with(tracing_subscriber::fmt::layer())
         .with(MetricsLayer::new(meter_provider.clone()))

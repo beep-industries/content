@@ -1,4 +1,5 @@
 use axum::Router;
+use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_scalar::{Scalar, Servable};
 
@@ -22,7 +23,8 @@ pub async fn app(app_state: AppState) -> Result<Router, CoreError> {
         .layer(default_cors_layer(&config.origins)?)
         .merge(Scalar::with_url("/docs", openapi.clone()))
         .merge(healthcheck_router(app_state.clone()))
-        .merge(storage_router(app_state.clone())))
+        .merge(storage_router(app_state.clone()))
+        .layer(TraceLayer::new_for_http()))
 }
 
 #[cfg(test)]

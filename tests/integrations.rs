@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use content::{config::Config, error::CoreError, utils::RealTime};
 use dotenv::dotenv;
-use reqwest::multipart::Part;
 
 fn bootstrap_config() -> Config {
     dotenv().ok();
@@ -65,15 +64,10 @@ async fn integration_full_flow() {
     // now we'll try to upload a file
     let buf: &[u8] = &[0xFF, 0xD8, 0xFF, 0xAA];
 
-    let part = Part::bytes(buf.to_vec())
-        .file_name("test.jpg")
-        .mime_str("image/jpeg")
-        .expect("Failed to create part");
-
-    let form = reqwest::multipart::Form::new().part("file", part);
     let response = client
         .put(&url)
-        .multipart(form)
+        .header("Content-Type", "image/jpeg")
+        .body(buf.to_vec())
         .send()
         .await
         .expect("Failed to make request");
