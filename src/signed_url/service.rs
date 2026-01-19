@@ -1,38 +1,27 @@
-use std::{
-    fmt::{Display, Formatter},
-    path::Path,
-};
+use std::path::Path;
 
 use axum::response::IntoResponse;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use http::{StatusCode, Uri, uri::Scheme};
 use mockall::automock;
 use serde::{Deserialize, Serialize};
+use strum_macros::Display;
+use thiserror::Error;
 use utoipa::ToSchema;
 
 use crate::{
-    error::{ApiError, CoreError},
+    error::CoreError,
     signed_url::extractor::Claims,
     signer::{HMACSigner, Signer},
     utils::{RealTime, Time},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Copy, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Copy, Default, Display)]
 pub enum AvailableActions {
     #[default]
     Put,
     Get,
     Delete,
-}
-
-impl Display for AvailableActions {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AvailableActions::Put => write!(f, "Put"),
-            AvailableActions::Get => write!(f, "Get"),
-            AvailableActions::Delete => write!(f, "Delete"),
-        }
-    }
 }
 
 impl From<AvailableActions> for http::Method {
@@ -54,38 +43,20 @@ pub struct SignedURLParams {
 
 pub type HMACUrlService = SignedUrlServiceImpl<HMACSigner, RealTime>;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum SignedUrlError {
-    #[allow(dead_code)]
+    #[error("Missing query params: {0}")]
     MissingQueryParams(String),
-    #[allow(dead_code)]
+    #[error("Invalid encoding")]
     InvalidEncoding,
+    #[error("Invalid base url: {0}")]
     InvalidBaseUrl(String),
-    #[allow(dead_code)]
+    #[error("Internal error: {0}")]
     InternalError(String),
-    #[allow(dead_code)]
+    #[error("Expired")]
     Expired,
-    #[allow(dead_code)]
+    #[error("Invalid signature")]
     InvalidSignature,
-    #[allow(dead_code)]
-    Unauthorized,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<ApiError> for SignedUrlError {
-    fn into(self) -> ApiError {
-        match self {
-            SignedUrlError::MissingQueryParams(e) => ApiError::BadRequest(e),
-            SignedUrlError::InvalidEncoding => ApiError::BadRequest("Invalid encoding".to_string()),
-            SignedUrlError::InvalidBaseUrl(e) => ApiError::BadRequest(e),
-            SignedUrlError::InternalError(e) => ApiError::InternalServerError(e),
-            SignedUrlError::Expired => ApiError::Unauthorized("Expired".to_string()),
-            SignedUrlError::InvalidSignature => {
-                ApiError::Unauthorized("Invalid signature".to_string())
-            }
-            SignedUrlError::Unauthorized => ApiError::Unauthorized("Unauthorized".to_string()),
-        }
-    }
 }
 
 impl IntoResponse for SignedUrlError {
@@ -97,23 +68,8 @@ impl IntoResponse for SignedUrlError {
             SignedUrlError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             SignedUrlError::Expired => StatusCode::UNAUTHORIZED,
             SignedUrlError::InvalidSignature => StatusCode::UNAUTHORIZED,
-            SignedUrlError::Unauthorized => StatusCode::UNAUTHORIZED,
         };
         (status, self.to_string()).into_response()
-    }
-}
-
-impl Display for SignedUrlError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SignedUrlError::MissingQueryParams(e) => write!(f, "{}", e),
-            SignedUrlError::InvalidEncoding => write!(f, "Invalid encoding"),
-            SignedUrlError::InvalidBaseUrl(e) => write!(f, "{}", e),
-            SignedUrlError::InternalError(e) => write!(f, "{}", e),
-            SignedUrlError::Expired => write!(f, "Expired"),
-            SignedUrlError::InvalidSignature => write!(f, "Invalid signature"),
-            SignedUrlError::Unauthorized => write!(f, "Unauthorized"),
-        }
     }
 }
 
@@ -255,8 +211,17 @@ where
             return Err(SignedUrlError::Expired);
         }
         let action = parsed_params.action;
-        let path = prefix.to_string();
-        Ok(Claims { action, path })
+        let prefix = prefix.trim_start_matches('/');
+        let path = prefix.split_once('/').unwrap_or((prefix, ""));
+        if path.1.is_empty() {
+            return Err(SignedUrlError::InvalidBaseUrl(
+                "Path is invalid".to_string(),
+            ));
+        }
+        Ok(Claims {
+            action,
+            path: (path.0.to_string(), path.1.to_string()),
+        })
     }
 
     fn verify_parts(&self, parts: http::request::Parts) -> Result<Claims, SignedUrlError> {
@@ -311,7 +276,7 @@ mod tests {
         let time = get_time();
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
             .expect("Invalid signer");
-        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let url = sign_url("/test/test".to_string(), AvailableActions::Put, 100);
         let params = service.verify_url(&url);
         assert!(params.is_ok());
     }
@@ -322,20 +287,20 @@ mod tests {
         let time = get_time();
         let service = SignedUrlServiceImpl::new(signer, time, "https://beep.com".to_string())
             .expect("Invalid signer");
-        let url = sign_url("test".to_string(), AvailableActions::Put, 100);
+        let url = sign_url("/bucket/test".to_string(), AvailableActions::Put, 100);
         let request = Request::builder()
             .uri(url)
             .method(http::Method::PUT)
             .body(axum::body::Body::empty())
-            .unwrap();
+            .expect("Invalid request");
 
         let parts = http::request::Parts::from_request(request, &())
             .await
             .expect("Invalid request");
         let params = service.verify_parts(parts);
         assert!(params.is_ok());
-        let params = params.unwrap();
-        assert_eq!(params.path, "/test");
+        let params = params.expect("Invalid params");
+        assert_eq!(params.path, ("bucket".to_string(), "test".to_string()));
         assert_eq!(params.action, AvailableActions::Put);
     }
 
@@ -350,7 +315,7 @@ mod tests {
             .uri(url)
             .method(http::Method::GET)
             .body(axum::body::Body::empty())
-            .unwrap();
+            .expect("Invalid request");
 
         let parts = http::request::Parts::from_request(request, &())
             .await

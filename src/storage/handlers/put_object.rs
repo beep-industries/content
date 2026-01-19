@@ -36,12 +36,7 @@ pub async fn put_object_handler(
     SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     put_object(multipart, state, prefix, file_name).await
 }
 
@@ -51,12 +46,7 @@ pub async fn put_object_test(
     SignedUrl(claims): SignedUrl,
     multipart: Multipart,
 ) -> Result<String, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     put_object(multipart, state, prefix, file_name).await
 }
 
@@ -89,23 +79,18 @@ where
         return Err(ApiError::BadRequest("No file".to_string()));
     };
 
-    let content_type = field
-        .content_type()
-        .unwrap_or("application/octet-stream")
-        .to_string();
-
-    let chunk_data = field
-        .bytes()
-        .await
-        .map_err(|e| ApiError::InternalServerError(e.to_string()))?
-        .to_vec();
-
     let bucket = state.config().s3_bucket.clone();
 
     let key = format!("{}/{}", prefix, file_name);
 
+    let file = state
+        .guards()
+        .check(&prefix, &key, field)
+        .await
+        .map_err(|e| e.into())?;
+
     state
-        .upload(&bucket, &key, chunk_data.clone(), &content_type)
+        .upload(&bucket, &key, file)
         .await
         .map_err(|e| e.into())?;
 
@@ -119,6 +104,7 @@ pub mod tests {
     use crate::{
         app::MockAppStateOperations,
         config::Config,
+        guards::{FileType, Guard, GuardsBuilder},
         signed_url::{extractor::Claims, service::AvailableActions},
     };
     use axum::{Router, routing::put};
@@ -153,13 +139,21 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
+        });
+
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .build(),
+            )
         });
 
         operations
@@ -189,11 +183,19 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations
             .expect_verify_parts()
             .returning(|_| Ok(Claims::default()));
+
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::ImageJPEG]))
+                    .build(),
+            )
+        });
 
         operations
             .expect_config()
@@ -216,11 +218,11 @@ pub mod tests {
         let mut operations = MockAppStateOperations::new();
         operations
             .expect_upload()
-            .returning(|_, _, _, _| Ok("Uploaded".to_string()));
+            .returning(|_, _, _| Ok("Uploaded".to_string()));
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });
@@ -228,6 +230,14 @@ pub mod tests {
         operations
             .expect_config()
             .returning(|| Arc::new(Config::default()));
+
+        operations.expect_guards().returning(|| {
+            Arc::new(
+                GuardsBuilder::new()
+                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .build(),
+            )
+        });
 
         let app_state = TestAppState::new(operations);
         let router = fake_router(app_state);

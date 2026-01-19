@@ -13,6 +13,10 @@ use crate::{
     get,
     path = "/{prefix}/{file_name}",
     tag = "storage",
+    params(
+        ("prefix" = String, Path, description = "Bucket prefix"),
+        ("file_name" = String, Path, description = "File name"),
+    ),
     responses(
         (status = 200, description = "Upload successful", body = String),
         (status = 400, description = "Invalid request", body = String),
@@ -23,12 +27,7 @@ pub async fn get_object_handler(
     State(state): State<AppState>,
     SignedUrl(claims): SignedUrl,
 ) -> Result<Response<Body>, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -37,13 +36,16 @@ where
     S: AppStateOperations + Send + Sync + 'static,
 {
     let bucket = state.config().s3_bucket.clone();
-    let (object, mime_type) = state.get_object(&bucket, &path).await.unwrap();
+    let (object, mime_type) = state
+        .get_object(&bucket, &path)
+        .await
+        .map_err(|e| e.into())?;
     let body = Body::from(object);
-    Ok(Response::builder()
+    Response::builder()
         .status(200)
         .header("Content-Type", mime_type)
         .body(body)
-        .unwrap())
+        .map_err(|e| ApiError::InternalServerError(e.to_string()))
 }
 
 #[cfg(test)]
@@ -51,12 +53,7 @@ pub async fn get_object_test(
     SignedUrl(claims): SignedUrl,
     State(state): State<TestAppState>,
 ) -> Result<Response<Body>, ApiError> {
-    let path = claims.path.split('/').collect::<Vec<&str>>();
-    if path.len() != 3 {
-        return Err(ApiError::BadRequest(format!("Invalid path: {:?}", path)));
-    }
-    let prefix = path[1].to_string();
-    let file_name = path[2].to_string();
+    let (prefix, file_name) = claims.path;
     get_object(format!("{}/{}", prefix, file_name), state).await
 }
 
@@ -92,7 +89,7 @@ mod tests {
             .returning(|_, _| Ok((vec![1, 2, 3], "text/plain".to_string())));
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: "/test-bucket/index.html".to_string(),
+                path: ("test-bucket".to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });

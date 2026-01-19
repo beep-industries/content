@@ -1,5 +1,7 @@
-#!/bin/bash
+#!/bin/bash -i
 set -e
+
+shopt -s expand_aliases
 
 update_env_var() {
 	local key=$1

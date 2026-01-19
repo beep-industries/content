@@ -13,8 +13,7 @@ pub trait S3: Send + Sync {
         &self,
         bucket: &str,
         key: &str,
-        body: Vec<u8>,
-        content_type: &str,
+        file: FileObject,
     ) -> Result<String, S3Error>;
     async fn show_buckets(&self) -> Result<Vec<String>, S3Error>;
     async fn get_object(&self, bucket: &str, key: &str) -> Result<(Vec<u8>, String), S3Error>;
@@ -54,16 +53,22 @@ impl S3 for Garage {
     ///     "key_id",
     ///     "secret_key",
     /// );
-    /// let res = s3.put_object("test", "test.txt", vec![1, 2, 3]).await;
+    /// let file = FileObject {
+    ///     data: vec![1, 2, 3],
+    ///     content_type: "application/octet-stream".to_string(),
+    ///     file_name: "test.txt".to_string(),
+    /// };
+    /// let res = s3.put_object("test", "test.txt", file).await;
     /// assert!(res.is_ok());
     /// ```
     async fn put_object(
         &self,
         bucket: &str,
         key: &str,
-        body: Vec<u8>,
-        content_type: &str,
+        file: FileObject,
     ) -> Result<String, S3Error> {
+        let body = file.data;
+        let content_type = file.content_type;
         let body_stream = aws_sdk_s3::primitives::ByteStream::from(body);
 
         self.client
@@ -188,76 +193,8 @@ impl Display for S3Error {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::config::tests::bootstrap_integration_tests;
-
-    use super::*;
-
-    fn setup_s3() -> Garage {
-        let config = bootstrap_integration_tests();
-        Garage::new(
-            config.s3_endpoint.parse().expect("Invalid S3 endpoint"),
-            &config.key_id,
-            &config.secret_key,
-        )
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_show_buckets() {
-        let s3 = setup_s3();
-        insta::assert_debug_snapshot!(s3.show_buckets().await);
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_put_object() {
-        let s3 = setup_s3();
-        let res = s3
-            .put_object(
-                "test",
-                "test.txt",
-                vec![1, 2, 3],
-                "application/octet-stream",
-            )
-            .await;
-        assert!(res.is_ok());
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_get_object() {
-        let s3 = setup_s3();
-        let _ = s3
-            .put_object(
-                "test",
-                "test2.txt",
-                vec![1, 2, 3],
-                "application/octet-stream",
-            )
-            .await;
-        let res = s3.get_object("test", "test2.txt").await;
-        assert!(res.is_ok());
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_mime_types_on_object() {
-        let s3 = setup_s3();
-        let _ = s3
-            .put_object(
-                "test",
-                "test4.txt",
-                "test".as_bytes().to_vec(),
-                "text/plain",
-            )
-            .await
-            .expect("should upload the file");
-        let (_, mime_type) = s3
-            .get_object("test", "test4.txt")
-            .await
-            .expect("should be able to retrieve file");
-        assert_eq!(mime_type, "text/plain".to_string());
-    }
+#[derive(Debug)]
+pub struct FileObject {
+    pub data: Vec<u8>,
+    pub content_type: String,
 }

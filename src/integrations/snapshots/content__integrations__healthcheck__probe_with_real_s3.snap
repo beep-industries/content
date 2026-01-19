@@ -1,9 +1,9 @@
 ---
-source: src/storage/router.rs
+source: src/integrations/healthcheck.rs
 expression: response
 ---
 TestResponse {
-    method: PUT,
+    method: GET,
     full_request_url: Url {
         scheme: "http",
         cannot_be_a_base: false,
@@ -15,16 +15,14 @@ TestResponse {
             ),
         ),
         port: None,
-        path: "/test-bucket/index.html",
-        query: Some(
-            "action=Put&expires=1684969600&signature=test",
-        ),
+        path: "/health",
+        query: None,
         fragment: None,
     },
     headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "content-length": "8",
+        "content-type": "application/json",
+        "content-length": "11",
     },
     status_code: 200,
-    response_body: b"Uploaded",
+    response_body: b"{\"s3\":true}",
 }
