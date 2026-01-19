@@ -43,13 +43,19 @@ pub struct SignedURLParams {
 
 pub type HMACUrlService = SignedUrlServiceImpl<HMACSigner, RealTime>;
 
-#[derive(Debug, Error, strum_macros::Display)]
+#[derive(Debug, Error)]
 pub enum SignedUrlError {
+    #[error("Missing query params: {0}")]
     MissingQueryParams(String),
+    #[error("Invalid encoding")]
     InvalidEncoding,
+    #[error("Invalid base url: {0}")]
     InvalidBaseUrl(String),
+    #[error("Internal error: {0}")]
     InternalError(String),
+    #[error("Expired")]
     Expired,
+    #[error("Invalid signature")]
     InvalidSignature,
 }
 

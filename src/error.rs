@@ -9,6 +9,10 @@ pub enum CoreError {
     S3EndpointError(String),
     #[error("SigningKeyError: {0}")]
     SigningKeyError(String),
+    #[error("StorageError: {0}")]
+    StorageError(String),
+    #[error("TelemetryError: {0}")]
+    TelemetryError(TelemetryError),
 }
 
 #[derive(Debug, thiserror::Error)]

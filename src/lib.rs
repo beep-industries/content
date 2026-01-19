@@ -30,8 +30,9 @@ mod router_test;
 mod integrations;
 
 pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
-    let content_service =
-        Arc::new(create_service(config.clone()).expect("Service creation failed"));
+    let content_service = Arc::new(
+        create_service(config.clone()).map_err(|e| CoreError::StorageError(e.to_string()))?,
+    );
 
     let signer_service = Arc::new(
         HMACUrlService::new(
@@ -58,7 +59,7 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
         AppState::new(content_service, config.clone(), signer_service, guards);
     let root = router::app(app_state)
         .await
-        .expect("Router initialization error");
+        .map_err(|e| CoreError::HttpServer(e.to_string()))?;
 
     let _ = crate::http::serve(root, config)
         .await

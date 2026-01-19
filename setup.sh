@@ -3,9 +3,6 @@ set -e
 
 shopt -s expand_aliases
 
-podman --version
-docker --version
-
 update_env_var() {
 	local key=$1
 	local value=$2
