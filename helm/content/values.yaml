@@ -1,0 +1,107 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/beep-industries/content
+  pullPolicy: IfNotPresent
+  tag: "0.0.1"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+httpRoute:
+  enabled: false
+  annotations: {}
+  # Reference to the Gateway(s) this route attaches to
+  parentRefs:
+    - name: default-gateway
+      namespace: default
+  # Hostnames to match
+  hostnames:
+    - content.beep.local
+  # Custom rules (optional - defaults to path prefix "/" routing to the service)
+  rules: []
+  # Example custom rules:
+  # rules:
+  #   - matches:
+  #       - path:
+  #           type: PathPrefix
+  #           value: /api
+  #     backendRefs:
+  #       - name: content
+  #         port: 80
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Application configuration
+config:
+  port: "3000"
+  origins: "*"
+  s3Endpoint: "http://garage:3900"
+  s3Bucket: "beep"
+  baseUrl: "http://content.beep.local"
+  otelEndpoint: ""
+
+# Sensitive configuration - use existingSecret or set values
+secrets:
+  # Use an existing secret instead of creating one
+  existingSecret: ""
+  # Only used if existingSecret is not set
+  s3KeyId: ""
+  s3SecretKey: ""
+  signingKey: ""
