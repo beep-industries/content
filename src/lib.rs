@@ -55,6 +55,14 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
                     crate::guards::FileType::ImageGIF,
                 ]),
             )
+            .add(
+                "server_picture",
+                crate::guards::Guard::new(vec![
+                    crate::guards::FileType::ImagePNG,
+                    crate::guards::FileType::ImageJPEG,
+                    crate::guards::FileType::ImageGIF,
+                ]),
+            )
             .build(),
     );
     let app_state: AppState =
