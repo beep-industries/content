@@ -5,7 +5,7 @@ db_engine = "sqlite"
 replication_factor = 1
 
 rpc_bind_addr = "[::]:3901"
-rpc_public_addr = "127.0.0.1:3901"
+rpc_public_addr = "0.0.0.0:3901"
 rpc_secret = "4deb02758c494ef8b4852f2eed158a31ef2bdbe24c7cba9618d0b503ed11d5f8"
 
 [s3_api]

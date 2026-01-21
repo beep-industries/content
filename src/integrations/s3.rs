@@ -28,6 +28,17 @@ async fn test_put_object() {
 }
 
 #[tokio::test]
+async fn test_put_object_with_prefix() {
+    let s3 = setup_s3();
+    let file = FileObject {
+        data: vec![1, 2, 3],
+        content_type: "application/octet-stream".to_string(),
+    };
+    let res = s3.put_object("test", "tkt/test.txt", file).await;
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
 async fn test_get_object() {
     let s3 = setup_s3();
     let file = FileObject {

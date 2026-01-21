@@ -48,14 +48,6 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
     let guards = Arc::new(
         GuardsBuilder::new()
             .add(
-                "profile_picture",
-                crate::guards::Guard::new(vec![
-                    crate::guards::FileType::ImagePNG,
-                    crate::guards::FileType::ImageJPEG,
-                    crate::guards::FileType::ImageGIF,
-                ]),
-            )
-            .add(
                 "server_picture",
                 crate::guards::Guard::new(vec![
                     crate::guards::FileType::ImagePNG,
