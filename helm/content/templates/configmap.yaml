@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "content.fullname" . }}
+  labels:
+    {{- include "content.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.config.port | quote }}
+  ORIGINS: {{ .Values.config.origins | quote }}
+  S3_ENDPOINT: {{ .Values.config.s3Endpoint | quote }}
+  S3_BUCKET: {{ .Values.config.s3Bucket | quote }}
+  BASE_URL: {{ .Values.config.baseUrl | quote }}
+  {{- if .Values.config.otelEndpoint }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.config.otelEndpoint | quote }}
+  {{- end }}

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: content
+description: Beep Content Service - manages content and object storage for the Beep platform
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+keywords:
+  - beep
+  - content
+  - s3
+  - storage
+maintainers:
+  - name: Beep Industries
