@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/opt/target/ \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock  \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
     cargo build --target=x86_64-unknown-linux-musl --release && \
-    cp ./target/x86_64-unknown-linux-musl/release/HackTheCrous-crawler /bin/crawler
+    cp ./target/x86_64-unknown-linux-musl/release/content /bin/content
 
 FROM debian:bullseye-slim AS final
 
