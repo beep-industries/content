@@ -3,10 +3,25 @@ services:
     image: docker.io/dxflrs/garage:v2.1.0
     ports:
       - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
     restart: unless-stopped
     tty: true
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
+
+  webui:
+    image: khairul169/garage-webui:latest
+    container_name: garage-webui
+    restart: unless-stopped
+    volumes:
+      - ./dev/garage.toml:/etc/garage.toml:ro
+    ports:
+      - 3909:3909
+    environment:
+      API_BASE_URL: "http://garage:3903"
+      S3_ENDPOINT_URL: "http://garage:3900"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.140.1
