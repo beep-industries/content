@@ -36,7 +36,7 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
       - name: Run integration tests
         run: |
-          cd ${{ github.workspace }}/${{ github.sha }}/core
+          cd ${{ github.workspace }}/${{ github.sha }}
           cargo test -- integration
   unit-tests:
     runs-on: ubuntu-latest
