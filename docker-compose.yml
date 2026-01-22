@@ -15,8 +15,8 @@ services:
         source: ./.env
         target: /opt/app/.env
     profiles:
-      - dev
       - all
+      - dev
   garage:
     image: docker.io/dxflrs/garage:v2.1.0
     ports:

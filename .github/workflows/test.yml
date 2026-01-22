@@ -33,11 +33,6 @@ jobs:
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
           curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
-      - name: Setup S3 buckets
-        run: |
-          cd ${{ github.workspace }}/${{ github.sha }}/setup
-          cargo run -- setup-s3 env
-          cargo run -- gen-key env
       - name: Set up environment variables
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
@@ -68,10 +63,6 @@ jobs:
           key: v1
       - name: Install cargo-insta
         run: cargo install cargo-insta
-      - name: Set up environment variables
-        run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
-          cargo run -- gen-key env
       - name: Run unit tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
