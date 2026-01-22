@@ -67,7 +67,6 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
 
     let status = response.status();
 
-
     assert!(status.is_success());
 
     let response = client
@@ -82,7 +81,6 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
 
     let binding = response.json::<serde_json::Value>().await.unwrap();
     let url = binding["url"].as_str().unwrap();
-
 
     let response = client
         .get(url)
