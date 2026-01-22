@@ -892,7 +892,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
-name = "content_core"
+name = "content"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3215,15 +3215,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "setup"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "clap 4.5.54",
 ]
 
 [[package]]

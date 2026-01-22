@@ -1,4 +1,19 @@
 services:
+  setup:
+    build:
+      context: .
+      dockerfile: Dockerfile-setup
+    command: ["/bin/setup", "setup-s3", "env"]
+    network_mode: host
+    environment:
+      - GARAGE_CONFIG_FILE=/etc/garage.toml
+      - ENV_FILE=/opt/app/.env
+    volumes:
+      - ./dev/garage.toml:/etc/garage.toml
+      - garage-meta:/tmp/meta/
+      - type: bind
+        source: ./.env
+        target: /opt/app/.env
   garage:
     image: docker.io/dxflrs/garage:v2.1.0
     ports:
@@ -8,13 +23,30 @@ services:
       - "3903:3903"
     restart: unless-stopped
     tty: true
+    networks:
+      - garage-network
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
-
+      - garage-meta:/tmp/meta/
+  content:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    env_file:
+      - .env
+    networks:
+      - garage-network
+    depends_on:
+      setup:
+        condition: service_completed_successfully
   webui:
     image: khairul169/garage-webui:latest
     container_name: garage-webui
     restart: unless-stopped
+    depends_on:
+      - garage
     volumes:
       - ./dev/garage.toml:/etc/garage.toml:ro
     ports:
@@ -23,13 +55,9 @@ services:
       API_BASE_URL: "http://garage:3903"
       S3_ENDPOINT_URL: "http://garage:3900"
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.140.1
-    command: ["--config=/etc/otel-config.yaml"]
-    ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics endpoint
-    volumes:
-      - ./otel-config.yaml:/etc/otel-config.yaml
-    restart: unless-stopped
+volumes:
+  garage-meta:
+
+networks:
+  garage-network:
+    driver: bridge

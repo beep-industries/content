@@ -1,5 +1,5 @@
 use clap::Parser;
-use content::{config::Config, error::CoreError, telemetry, utils::get_time};
+use content_core::{config::Config, error::CoreError, telemetry, utils::get_time};
 use dotenv::dotenv;
 use std::sync::Arc;
 
@@ -14,7 +14,7 @@ async fn main() -> Result<(), CoreError> {
 
     let config = Arc::new(config);
 
-    content::app(config, time).await?;
+    content_core::app(config, time).await?;
 
     telemetry_guard.shutdown().await;
 

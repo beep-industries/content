@@ -1,52 +1,14 @@
-[package]
-name = "content"
-version = "0.1.0"
+[workspace]
+resolver = "3"
+members = ["core", "setup"]
+
+[workspace.package]
 edition = "2024"
+version = "0.1.0"
+authors = ["beep <contact@beep.ovh"]
+license = "Apache-2.0"
 
-[dependencies]
-aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
-aws-credential-types = "1.2.9"
-aws-sdk-s3 = "1.112.0"
-aws-smithy-types = "1.3.4"
-axum = "0.8.6"
+[workspace.dependencies]
 clap = { version = "4.5.51", features = ["derive", "env"] }
-dotenv = { version = "0.15.0", features = ["clap"] }
-fmt = "0.1.0"
-lock_api = "0.4.2"
-opentelemetry = { version = "0.31.0"}
-opentelemetry-stdout = "0.31.0"
-opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.31.0", features = ["tonic", "grpc-tonic"] }
-mockall = "0.13.1"
-thiserror = "2.0.17"
-tokio = { version = "1.48.0", features = ["rt-multi-thread"] }
-tower = "0.5.2"
-tower-http = { version = "0.6.6", features = ["cors", "trace"] }
-tracing-opentelemetry = "0.32.0"
-tracing-subscriber = {version ="0.3.20", features = ["env-filter"]}
-tracing = "0.1.41"
-ctrlc = "3.2.0"
-global = "0.4.3"
-tonic = "0.14.2"
-anyhow = "1.0.100"
-opentelemetry-semantic-conventions = { version = "0.31.0", features = ["semconv_experimental"] }
-tracing-core = "0.1.34"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
-hmac = "0.12.1"
-sha2 = "0.10.9"
-chrono = "0.4.42"
-serde_qs = "0.15.0"
-http = "1.4.0"
 base64 = "0.22.1"
-utoipa = "5.4.0"
-utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-strum = "0.27"
-strum_macros = "0.27"
-infer = "0.19.0"
 
-[dev-dependencies]
-insta = { version = "1.43.2", features = ["yaml"] }
-axum-test = { version = "18.2.1", features = ["reqwest"] }
-mockall = "0.13.1"
-reqwest = "0.12.24"
