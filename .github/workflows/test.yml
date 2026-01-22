@@ -26,7 +26,7 @@ jobs:
       - name: Run services
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
-          docker compose up --profile dev -d
+          docker compose --profile dev up -d
       - name: Install cargo-insta
         run: cargo install cargo-insta
       - name: Wait for garage
