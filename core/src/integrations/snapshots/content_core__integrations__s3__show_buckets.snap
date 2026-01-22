@@ -2,8 +2,8 @@
 source: core/src/integrations/s3.rs
 expression: s3.show_buckets().await
 ---
-Ok(
-    [
-        "test",
-    ],
+Err(
+    UploadFailure(
+        "unhandled error (AccessDenied)",
+    ),
 )
