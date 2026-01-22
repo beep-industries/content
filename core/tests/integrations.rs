@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use content::{config::Config, error::CoreError, utils::RealTime};
+use content_core::{config::Config, error::CoreError, utils::RealTime};
 use dotenv::dotenv;
 
 fn bootstrap_config() -> Config {
@@ -9,7 +9,7 @@ fn bootstrap_config() -> Config {
         port: std::env::var("PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(4000),
+            .unwrap_or(3004),
         origins: std::env::var("ORIGINS")
             .unwrap_or("beep_test.com".to_string())
             .split(',')
@@ -25,7 +25,7 @@ fn bootstrap_config() -> Config {
 
 async fn launch() -> Result<(), CoreError> {
     let config = Arc::new(bootstrap_config());
-    content::app(config, RealTime {}).await?;
+    content_core::app(config, RealTime {}).await?;
     Ok(())
 }
 
@@ -34,7 +34,7 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let response = reqwest::get("http://localhost:4000/health")
+    let response = reqwest::get("http://localhost:3004/health")
         .await
         .expect("Failed to make request");
 
@@ -43,7 +43,7 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
     // next we'll sign an url
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("http://localhost:4000/{}", endpoint))
+        .post(format!("http://localhost:3004/{}", endpoint))
         .json(&serde_json::json!({
             "action": "Put",
             "expires_in_ms": 1000
@@ -54,14 +54,11 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
     assert!(response.status().is_success());
     let binding = response.json::<serde_json::Value>().await.unwrap();
     let url = binding["url"].as_str().unwrap();
-    assert!(url.starts_with("https://beep.com"));
-
-    let url = url.replace("https://beep.com", "http://localhost:4000");
 
     // now we'll try to upload a file
 
     let response = client
-        .put(&url)
+        .put(url)
         .header("Content-Type", mime)
         .body(payload.to_vec())
         .send()
@@ -70,12 +67,11 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
 
     let status = response.status();
 
-    let body = response.text().await;
 
     assert!(status.is_success());
 
     let response = client
-        .post(format!("http://localhost:4000/{}", endpoint))
+        .post(format!("http://localhost:3004/{}", endpoint))
         .json(&serde_json::json!({
             "action": "Get",
             "expires_in_ms": 1000
@@ -86,12 +82,10 @@ async fn integration_full_flow(endpoint: &str, payload: &[u8], mime: &str) {
 
     let binding = response.json::<serde_json::Value>().await.unwrap();
     let url = binding["url"].as_str().unwrap();
-    assert!(url.starts_with("https://beep.com"));
 
-    let url = url.replace("https://beep.com", "http://localhost:4000");
 
     let response = client
-        .get(&url)
+        .get(url)
         .send()
         .await
         .expect("Failed to make request");

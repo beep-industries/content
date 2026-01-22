@@ -1,0 +1,15 @@
+---
+source: core/src/guards/mod.rs
+expression: file
+---
+Ok(
+    FileObject {
+        data: [
+            255,
+            216,
+            255,
+            170,
+        ],
+        content_type: "image/jpeg",
+    },
+)

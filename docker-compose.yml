@@ -14,6 +14,9 @@ services:
       - type: bind
         source: ./.env
         target: /opt/app/.env
+    profiles:
+      - dev
+      - all
   garage:
     image: docker.io/dxflrs/garage:v2.1.0
     ports:
@@ -28,6 +31,9 @@ services:
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
       - garage-meta:/tmp/meta/
+    profiles:
+      - dev
+      - all
   content:
     build:
       context: .
@@ -41,6 +47,8 @@ services:
     depends_on:
       setup:
         condition: service_completed_successfully
+    profiles:
+      - prod
   webui:
     image: khairul169/garage-webui:latest
     container_name: garage-webui
@@ -54,6 +62,9 @@ services:
     environment:
       API_BASE_URL: "http://garage:3903"
       S3_ENDPOINT_URL: "http://garage:3900"
+    profiles:
+      - dev
+      - all
 
 volumes:
   garage-meta:

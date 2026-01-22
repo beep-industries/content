@@ -1,0 +1,20 @@
+---
+source: core/src/guards/mod.rs
+expression: file
+---
+Ok(
+    FileObject {
+        data: [
+            116,
+            101,
+            115,
+            116,
+            32,
+            102,
+            105,
+            108,
+            101,
+        ],
+        content_type: "text/html",
+    },
+)

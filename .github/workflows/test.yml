@@ -26,7 +26,7 @@ jobs:
       - name: Run services
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
-          docker compose up -d
+          docker compose up --profile dev -d
       - name: Install cargo-insta
         run: cargo install cargo-insta
       - name: Wait for garage
@@ -35,10 +35,9 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
       - name: Setup S3 buckets
         run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
-          chmod +x setup.sh
-          ./setup.sh setup-s3 env
-          ./setup.sh gen-key env
+          cd ${{ github.workspace }}/${{ github.sha }}/setup
+          cargo run -- setup-s3 env
+          cargo run -- gen-key env
       - name: Set up environment variables
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
@@ -46,7 +45,7 @@ jobs:
           cat .env
       - name: Run integration tests
         run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
+          cd ${{ github.workspace }}/${{ github.sha }}/core
           cargo test -- integration
   unit-tests:
     runs-on: ubuntu-latest
@@ -72,9 +71,7 @@ jobs:
       - name: Set up environment variables
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
-          cat .env.example >> .env
-          cat .env
-          ./setup.sh gen-key env
+          cargo run -- gen-key env
       - name: Run unit tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}

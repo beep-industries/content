@@ -41,4 +41,4 @@ base64.workspace = true
 insta = { version = "1.43.2", features = ["yaml"] }
 axum-test = { version = "18.2.1", features = ["reqwest"] }
 mockall = "0.13.1"
-reqwest = "0.12.24"
+reqwest = { version = "0.12.24", features = ["blocking", "json"] }
