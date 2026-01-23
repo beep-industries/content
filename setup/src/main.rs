@@ -264,7 +264,7 @@ fn wait_until_s3_up() -> anyhow::Result<()> {
 
 fn setup_signing_key(write_env: bool) -> anyhow::Result<()> {
     let mut random_bytes = [0u8; 20];
-    let file = fs::File::open("/dev/random")?;
+    let file = fs::File::open("/dev/urandom")?;
     let mut reader = BufReader::new(file);
     reader.read_exact(&mut random_bytes)?;
 
