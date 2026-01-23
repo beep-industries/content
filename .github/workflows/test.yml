@@ -28,6 +28,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
           docker compose --profile dev up -d
+          cat .env
       - name: Install cargo-insta
         run: cargo install cargo-insta
       - name: Wait for garage
@@ -37,6 +38,7 @@ jobs:
       - name: Run integration tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env
           cargo test -- integration
   unit-tests:
     runs-on: ubuntu-latest
