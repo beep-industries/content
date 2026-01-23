@@ -1,0 +1,5 @@
+---
+source: core/src/http.rs
+expression: response.headers()
+---
+{}

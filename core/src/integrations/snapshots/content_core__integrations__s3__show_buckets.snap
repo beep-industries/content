@@ -1,5 +1,5 @@
 ---
-source: src/integrations/s3.rs
+source: core/src/integrations/s3.rs
 expression: s3.show_buckets().await
 ---
 Ok(

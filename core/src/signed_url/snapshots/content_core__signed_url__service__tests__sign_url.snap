@@ -1,0 +1,5 @@
+---
+source: core/src/signed_url/service.rs
+expression: url
+---
+https://beep.com/test?action=Put&expires=200&signature=IdwBdLmatRUTJcTIdMyTrw54eFYTHadbCgaYEn1EFQM=

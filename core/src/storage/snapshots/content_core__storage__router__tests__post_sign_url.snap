@@ -1,0 +1,29 @@
+---
+source: core/src/storage/router.rs
+expression: response
+---
+TestResponse {
+    version: HTTP/1.1,
+    method: POST,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/prefix/file_name",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "application/json",
+        "content-length": "43",
+    },
+    status_code: 200,
+    response_body: b"{\"url\":\"https://beep.com/prefix/file_name\"}",
+}

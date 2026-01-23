@@ -19,34 +19,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: ${{ github.sha }}
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: v1
+      - name: Set up environment variables
+        run: |
+          cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env.example >> .env
+          cat .env
       - name: Run services
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
-          docker compose up -d
+          docker compose --profile dev up -d
+          cat .env
       - name: Install cargo-insta
         run: cargo install cargo-insta
       - name: Wait for garage
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
           curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:3900
-      - name: Setup S3 buckets
-        run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
-          chmod +x setup.sh
-          ./setup.sh setup-s3 env
-          ./setup.sh gen-key env
-      - name: Set up environment variables
-        run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
-          cat .env.example >> .env
-          cat .env
       - name: Run integration tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
+          cat .env
           cargo test -- integration
   unit-tests:
     runs-on: ubuntu-latest
@@ -69,12 +61,6 @@ jobs:
           key: v1
       - name: Install cargo-insta
         run: cargo install cargo-insta
-      - name: Set up environment variables
-        run: |
-          cd ${{ github.workspace }}/${{ github.sha }}
-          cat .env.example >> .env
-          cat .env
-          ./setup.sh gen-key env
       - name: Run unit tests
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}

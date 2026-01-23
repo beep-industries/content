@@ -1,0 +1,11 @@
+[package]
+name = "setup"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0.100"
+base64.workspace = true
+clap.workspace = true

@@ -31,6 +31,7 @@ impl Garage {
         let s3_config = s3::config::Builder::new()
             .credentials_provider(credentials)
             .endpoint_url(url.to_string())
+            .force_path_style(true)
             .behavior_version(BehaviorVersion::latest())
             .region(s3::config::Region::new("garage"))
             .build();

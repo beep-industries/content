@@ -1,0 +1,31 @@
+---
+source: core/src/storage/handlers/put_object.rs
+expression: response
+---
+TestResponse {
+    version: HTTP/1.1,
+    method: PUT,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/test-bucket/index.html",
+        query: Some(
+            "action=Put&expires=1684969600&signature=test",
+        ),
+        fragment: None,
+    },
+    headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "content-length": "8",
+    },
+    status_code: 200,
+    response_body: b"Uploaded",
+}
