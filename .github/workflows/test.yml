@@ -22,7 +22,7 @@ jobs:
       - name: Set up environment variables
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
-          cat .env.example >> .env
+          cat .env.dev >> .env
           cat .env
       - name: Run services
         run: |
