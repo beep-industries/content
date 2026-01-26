@@ -23,9 +23,9 @@ jobs:
         run: |
           cd ${{ github.workspace }}/${{ github.sha }}
           docker compose --profile dev up -d
-          cp ./local.env/.env .env
-          sed -i 's/garage/0.0.0.0/g' .env
-          cat .env
+          cp ./local.env/.env content/.env
+          sed -i 's/garage/0.0.0.0/g' content/.env
+          cat content/.env
       - name: Install cargo-insta
         run: cargo install cargo-insta
       - name: Wait for garage

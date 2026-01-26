@@ -53,6 +53,8 @@ services:
     image: khairul169/garage-webui:latest
     container_name: garage-webui
     restart: unless-stopped
+    networks:
+      - garage-network
     depends_on:
       - garage
     volumes:
