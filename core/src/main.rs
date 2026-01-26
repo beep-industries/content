@@ -1,8 +1,8 @@
 use clap::Parser;
-use tracing::info;
 use content_core::{config::Config, error::CoreError, telemetry, utils::get_time};
 use dotenv::dotenv;
 use std::sync::Arc;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), CoreError> {
