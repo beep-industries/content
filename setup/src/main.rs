@@ -27,6 +27,7 @@ enum Action {
     Reset,
     SetupS3,
     GenKey,
+    Setup,
 }
 
 #[derive(Clone, ValueEnum, PartialEq)]
@@ -56,11 +57,19 @@ fn main() -> anyhow::Result<()> {
         }
         Action::SetupS3 => {
             println!("Waiting for S3 to be ready");
-            sleep(Duration::from_secs(3));
+            wait_until_s3_up()?;
             println!("Starting setup");
             setup_s3(write_env)?;
         }
         Action::GenKey => {
+            setup_signing_key(write_env)?;
+        }
+        Action::Setup => {
+            println!("Waiting for S3 to be ready");
+            wait_until_s3_up()?;
+            println!("Starting setup");
+            setup_s3(write_env)?;
+            println!("Generating signing key");
             setup_signing_key(write_env)?;
         }
     }
@@ -252,8 +261,18 @@ fn wait_until_s3_up() -> anyhow::Result<()> {
             .stderr(Stdio::null())
             .status()?;
 
+        println!("status: {:?}", status);
         if status.success() {
-            return Ok(());
+            let bucket_endpoint = env::var("BUCKET_ENDPOINT").expect("BUCKET_ENDPOINT not set");
+            let res = reqwest::blocking::get(&bucket_endpoint);
+            println!("res: {:?}", res);
+            if res.is_err() {
+                println!("Waiting for S3 to be ready");
+                sleep(Duration::from_secs(1));
+                continue;
+            }else {
+                return Ok(());
+            }
         }
 
         sleep(Duration::from_secs(1));

@@ -11,4 +11,4 @@ license = "Apache-2.0"
 [workspace.dependencies]
 clap = { version = "4.5.51", features = ["derive", "env"] }
 base64 = "0.22.1"
-
+reqwest = { version = "0.12.24", features = ["blocking", "json", "native-tls-vendored"] }
