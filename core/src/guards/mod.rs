@@ -127,14 +127,14 @@ impl Guard {
                     return Err(GuardError::WrongContentType);
                 }
 
-                let extension = file_name.split('.').next_back();
-                if extension.is_none() {
-                    return Err(GuardError::MissingFileExtension);
-                }
-                // We just checked that the extension is not None, so we can unwrap safely
-                if extension.expect("Extension should be set") != kind.extension() {
-                    return Err(GuardError::WrongFileExtension);
-                }
+                // let extension = file_name.split('.').next_back();
+                // if extension.is_none() {
+                //     return Err(GuardError::MissingFileExtension);
+                // }
+                // // We just checked that the extension is not None, so we can unwrap safely
+                // if extension.expect("Extension should be set") != kind.extension() {
+                //     return Err(GuardError::WrongFileExtension);
+                // }
             }
             None => {
                 return Err(GuardError::UnknownFileType);
