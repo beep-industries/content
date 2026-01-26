@@ -7,12 +7,12 @@ services:
     network_mode: host
     environment:
       - GARAGE_CONFIG_FILE=/etc/garage.toml
-      - ENV_FILE=/opt/app/.env
+      - ENV_FILE=/tmp/env/.env
       - BUCKET_ENDPOINT=http://0.0.0.0:3900
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
-      - garage-meta:/tmp/meta/
-      - ./.env:/opt/app/.env
+      - garage-meta:/var/lib/garage/meta
+      - ./local.env/:/tmp/env/
     profiles:
       - all
       - dev
@@ -29,7 +29,8 @@ services:
       - garage-network
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
-      - garage-meta:/tmp/meta/
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
     profiles:
       - dev
       - all
@@ -39,8 +40,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3004:3004"
-    env_file:
-      - .env
+    volumes:
+      - ./local.env/:/opt/app/
     networks:
       - garage-network
     depends_on:
@@ -67,6 +68,7 @@ services:
 
 volumes:
   garage-meta:
+  garage-data:
 
 networks:
   garage-network:

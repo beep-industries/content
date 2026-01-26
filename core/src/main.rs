@@ -1,4 +1,5 @@
 use clap::Parser;
+use tracing::info;
 use content_core::{config::Config, error::CoreError, telemetry, utils::get_time};
 use dotenv::dotenv;
 use std::sync::Arc;
@@ -7,6 +8,8 @@ use std::sync::Arc;
 async fn main() -> Result<(), CoreError> {
     dotenv().ok();
     let config = Config::parse();
+
+    info!("{:?}", config);
     let time = get_time();
 
     let telemetry_guard = telemetry::init(&config)

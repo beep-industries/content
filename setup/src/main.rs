@@ -1,10 +1,12 @@
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::{BufReader, Read, Write};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread::sleep;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use base64::Engine;
 use clap::{Parser, ValueEnum};
 
@@ -48,6 +50,13 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
+    if should_init_env_file() && write_env {
+        init_env_file().map_err(|e| {
+            println!("Failed to init env file: {}", e);
+            e
+        })?;
+    }
+
     match cli.action {
         Action::Reset => {
             reset()?;
@@ -87,6 +96,27 @@ fn check_if_need_to_setup() -> anyhow::Result<()> {
         }
     }
     anyhow::bail!("Buckets already exist, aborting setup")
+}
+
+fn should_init_env_file() -> bool {
+    let needed_keys = vec![
+        "ORIGINS",
+        "PORT",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "S3_ENDPOINT",
+        "BASE_URL",
+    ];
+    let env_file = env::var("ENV_FILE").unwrap_or(".env".to_string());
+    if !Path::new(&env_file).exists() {
+        return true;
+    }
+    let env_file_content = fs::read_to_string(&env_file).unwrap_or_default();
+    for key in needed_keys {
+        if !env_file_content.contains(&key) {
+            return true;
+        }
+    }
+    false
 }
 
 fn update_env_var(key: &str, value: &str) -> anyhow::Result<()> {
@@ -270,7 +300,7 @@ fn wait_until_s3_up() -> anyhow::Result<()> {
                 println!("Waiting for S3 to be ready");
                 sleep(Duration::from_secs(1));
                 continue;
-            }else {
+            } else {
                 return Ok(());
             }
         }
@@ -295,6 +325,22 @@ fn setup_signing_key(write_env: bool) -> anyhow::Result<()> {
         update_env_var("SIGNING_KEY", &signing_key)?;
     }
 
+    Ok(())
+}
+
+fn init_env_file() -> anyhow::Result<()> {
+    let env_file = env::var("ENV_FILE").unwrap_or(".env".to_string());
+    let base_file = include_str!("../../.env.example");
+    println!("Writing env file: {}", env_file);
+    println!("Base file: {}", base_file);
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(env_file)
+        .map_err(|e| anyhow!("Failed to open env file: {}", e))?;
+    file.write_all(base_file.as_bytes())
+        .map_err(|e| anyhow!("Failed to write env file: {}", e))?;
     Ok(())
 }
 
