@@ -44,6 +44,8 @@ USER appuser
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/content_core /bin/
 
+WORKDIR /opt/app
+
 # What the container should run when it is started.
-ENTRYPOINT ["/bin/bash", "-c"]
+ENTRYPOINT [ "/bin/bash", "-c"]
 CMD ["/bin/content_core"]

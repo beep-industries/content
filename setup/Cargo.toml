@@ -9,3 +9,4 @@ license.workspace = true
 anyhow = "1.0.100"
 base64.workspace = true
 clap.workspace = true
+reqwest.workspace = true

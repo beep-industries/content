@@ -6,6 +6,7 @@ RUN mkdir -p setup/src && echo "fn main() {}" >> setup/src/main.rs
 RUN mkdir -p core/src && echo "fn main() {}" >> core/src/main.rs
 
 COPY Cargo.toml .
+COPY .env.example .env.example
 COPY Cargo.lock .
 COPY setup/Cargo.toml setup/Cargo.toml
 COPY core/Cargo.toml core/Cargo.toml
@@ -35,7 +36,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates
 RUN wget https://garagehq.deuxfleurs.fr/_releases/v2.1.0/x86_64-unknown-linux-musl/garage
 RUN chmod +x garage && mv garage /bin/garage
 
-
+RUN mkdir -p /opt/app && touch /opt/app/.env
 
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/setup /bin/

@@ -3,18 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-setup
-    command: ["/bin/setup", "setup-s3", "env"]
+    command: ["/bin/setup", "setup", "env"]
     network_mode: host
     environment:
       - GARAGE_CONFIG_FILE=/etc/garage.toml
-      - ENV_FILE=/opt/app/.env
+      - ENV_FILE=/tmp/env/.env
+      - BUCKET_ENDPOINT=http://0.0.0.0:3900
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
-      - garage-meta:/tmp/meta/
-      - garage-data:/tmp/data/
-      - type: bind
-        source: ./.env
-        target: /opt/app/.env
+      - garage-meta:/var/lib/garage/meta
+      - ./local.env/:/tmp/env/
     profiles:
       - all
       - dev
@@ -31,7 +29,8 @@ services:
       - garage-network
     volumes:
       - ./dev/garage.toml:/etc/garage.toml
-      - garage-meta:/tmp/meta/
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
     profiles:
       - dev
       - all
@@ -41,19 +40,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3004:3004"
-    env_file:
-      - .env
+    volumes:
+      - ./local.env/:/opt/app/
     networks:
       - garage-network
     depends_on:
       setup:
         condition: service_completed_successfully
     profiles:
-      - prod
+      - all
   webui:
     image: khairul169/garage-webui:latest
     container_name: garage-webui
     restart: unless-stopped
+    networks:
+      - garage-network
     depends_on:
       - garage
     volumes:
