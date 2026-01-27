@@ -4,8 +4,8 @@ use tracing::info;
 
 use crate::{
     app::AppState, config::Config, error::CoreError, guards::GuardsBuilder,
-    plumbing::create_service, signed_url::service::HMACUrlService, signer::HMACSigner,
-    utils::RealTime,
+    plumbing::create_service, prefixes::Prefix, signed_url::service::HMACUrlService,
+    signer::HMACSigner, utils::RealTime,
 };
 
 mod app;
@@ -15,6 +15,7 @@ mod healthcheck;
 mod http;
 mod openapi;
 mod plumbing;
+mod prefixes;
 mod router;
 mod s3;
 mod signed_url;
@@ -48,7 +49,7 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
     let guards = Arc::new(
         GuardsBuilder::new()
             .add(
-                "server_picture",
+                Prefix::ServerPicture,
                 crate::guards::Guard::new(vec![
                     crate::guards::FileType::ImagePNG,
                     crate::guards::FileType::ImageJPEG,
@@ -56,7 +57,7 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
                 ]),
             )
             .add(
-                "server_banner",
+                Prefix::ServerBanner,
                 crate::guards::Guard::new(vec![
                     crate::guards::FileType::ImagePNG,
                     crate::guards::FileType::ImageJPEG,
@@ -64,7 +65,7 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
                 ]),
             )
             .add(
-                "profile_picture",
+                Prefix::ProfilePicture,
                 crate::guards::Guard::new(vec![
                     crate::guards::FileType::ImagePNG,
                     crate::guards::FileType::ImageJPEG,
@@ -72,10 +73,8 @@ pub async fn app(config: Arc<Config>, time: RealTime) -> Result<(), CoreError> {
                 ]),
             )
             .add(
-                "message_attachment",
-                crate::guards::Guard::new(vec![
-                    crate::guards::FileType::Any,
-                ]),
+                Prefix::MessageAttachment,
+                crate::guards::Guard::new(vec![crate::guards::FileType::Any]),
             )
             .build(),
     );
