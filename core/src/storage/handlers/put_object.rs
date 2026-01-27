@@ -173,7 +173,7 @@ pub mod tests {
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: ("test-bucket".to_string(), "index.html".to_string()),
+                path: (Prefix::ServerBanner.as_str().to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });
