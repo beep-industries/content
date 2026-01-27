@@ -1,0 +1,29 @@
+---
+source: core/src/storage/handlers/get_public_object.rs
+expression: response
+---
+TestResponse {
+    version: HTTP/1.1,
+    method: GET,
+    full_request_url: Url {
+        scheme: "http",
+        cannot_be_a_base: false,
+        username: "",
+        password: None,
+        host: Some(
+            Domain(
+                "localhost",
+            ),
+        ),
+        port: None,
+        path: "/public/test-bucket/index.html",
+        query: None,
+        fragment: None,
+    },
+    headers: {
+        "content-type": "text/plain",
+        "content-length": "3",
+    },
+    status_code: 200,
+    response_body: b"\x01\x02\x03",
+}
