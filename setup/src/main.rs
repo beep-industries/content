@@ -112,7 +112,7 @@ fn should_init_env_file() -> bool {
     }
     let env_file_content = fs::read_to_string(&env_file).unwrap_or_default();
     for key in needed_keys {
-        if !env_file_content.contains(&key) {
+        if !env_file_content.contains(key) {
             return true;
         }
     }

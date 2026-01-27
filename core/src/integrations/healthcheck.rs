@@ -8,6 +8,7 @@ use crate::{
     guards::{FileType, Guard, GuardsBuilder},
     healthcheck::router::healthcheck_router,
     plumbing::create_service,
+    prefixes::Prefix,
     s3::{Garage, S3},
     signed_url::service::HMACUrlService,
     signer::HMACSigner,
@@ -37,7 +38,10 @@ async fn test_probe_with_real_s3() {
     );
     let guards = Arc::new(
         GuardsBuilder::new()
-            .add("profile_picture", Guard::new(vec![FileType::ImageJPEG]))
+            .add(
+                Prefix::ProfilePicture,
+                Guard::new(vec![FileType::ImageJPEG]),
+            )
             .build(),
     );
     let app_state = AppState::new(content_service, config.clone(), signer_service, guards);

@@ -104,6 +104,7 @@ pub mod tests {
         app::MockAppStateOperations,
         config::Config,
         guards::{FileType, Guard, GuardsBuilder},
+        prefixes::Prefix,
         signed_url::{extractor::Claims, service::AvailableActions},
     };
     use axum::{Router, routing::put};
@@ -127,7 +128,10 @@ pub mod tests {
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: ("test-bucket".to_string(), "index.html".to_string()),
+                path: (
+                    Prefix::ServerBanner.as_str().to_string(),
+                    "index.html".to_string(),
+                ),
                 action: AvailableActions::Put,
             })
         });
@@ -135,7 +139,7 @@ pub mod tests {
         operations.expect_guards().returning(|| {
             Arc::new(
                 GuardsBuilder::new()
-                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .add(Prefix::ServerBanner, Guard::new(vec![FileType::Any]))
                     .build(),
             )
         });
@@ -169,7 +173,7 @@ pub mod tests {
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: ("test-bucket".to_string(), "index.html".to_string()),
+                path: (Prefix::ServerBanner.as_str().to_string(), "index.html".to_string()),
                 action: AvailableActions::Put,
             })
         });
@@ -181,7 +185,7 @@ pub mod tests {
         operations.expect_guards().returning(|| {
             Arc::new(
                 GuardsBuilder::new()
-                    .add("test-bucket", Guard::new(vec![FileType::Any]))
+                    .add(Prefix::ServerBanner, Guard::new(vec![FileType::Any]))
                     .build(),
             )
         });
@@ -193,7 +197,7 @@ pub mod tests {
 
         let client = TestServer::new(router).expect("Axum test server creation failed");
         let response = client
-            .put("/test-bucket/index.html?action=Put&expires=1684969600&signature=test")
+            .put("/server_banner/index.html?action=Put&expires=1684969600&signature=test")
             .content_type(CONTENT_TYPE)
             .bytes(vec![].into())
             .await;

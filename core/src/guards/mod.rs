@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{error::ApiError, s3::FileObject};
+use crate::{error::ApiError, prefixes::Prefix, s3::FileObject};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FileType {
@@ -65,13 +65,8 @@ impl Into<ApiError> for GuardError {
             }
             GuardError::WrongContentType => ApiError::BadRequest("Wrong content type".to_string()),
             GuardError::UnknownFileType => ApiError::BadRequest("Unknown file type".to_string()),
-            GuardError::MissingFileExtension => {
-                ApiError::BadRequest("Missing file extension".to_string())
-            }
-            GuardError::WrongFileExtension => {
-                ApiError::BadRequest("Wrong file extension".to_string())
-            }
             GuardError::NoGuardFound => ApiError::InternalServerError("No guard found".to_string()),
+            GuardError::UnknownPrefix => ApiError::NotFound("Unknown prefix".to_string()),
         }
     }
 }
@@ -81,8 +76,7 @@ pub enum GuardError {
     FileTypeNotAllowed,
     WrongContentType,
     UnknownFileType,
-    MissingFileExtension,
-    WrongFileExtension,
+    UnknownPrefix,
     NoGuardFound,
 }
 
@@ -92,7 +86,7 @@ pub struct Guard {
 }
 
 pub struct Guards {
-    map: HashMap<String, Guard>,
+    map: HashMap<Prefix, Guard>,
 }
 
 impl Guard {
@@ -104,7 +98,7 @@ impl Guard {
         &self,
         data: Vec<u8>,
         content_type: &str,
-        file_name: &str,
+        _file_name: &str,
     ) -> Result<FileObject, GuardError> {
         let content_type = content_type.to_string();
 
@@ -146,7 +140,7 @@ impl Guard {
 }
 
 pub struct GuardsBuilder {
-    map: HashMap<String, Guard>,
+    map: HashMap<Prefix, Guard>,
 }
 
 impl GuardsBuilder {
@@ -155,8 +149,8 @@ impl GuardsBuilder {
             map: HashMap::new(),
         }
     }
-    pub fn add(&mut self, destination: &str, guard: Guard) -> &mut Self {
-        self.map.insert(destination.to_string(), guard);
+    pub fn add(&mut self, destination: Prefix, guard: Guard) -> &mut Self {
+        self.map.insert(destination, guard);
         self
     }
 
@@ -175,7 +169,11 @@ impl Guards {
         data: Vec<u8>,
         content_type: &str,
     ) -> Result<FileObject, GuardError> {
-        let guard = self.map.get(destination);
+        let prefix = Prefix::from(destination);
+        if prefix == Prefix::Unknown {
+            return Err(GuardError::UnknownPrefix);
+        }
+        let guard = self.map.get(&prefix);
         let file = match guard {
             Some(guard) => guard.check(data, content_type, file_name),
             None => Err(GuardError::NoGuardFound),
@@ -196,14 +194,14 @@ mod tests {
 
         let guards = GuardsBuilder::new()
             .add(
-                "test",
+                Prefix::ServerBanner,
                 Guard {
                     allowed_file_types: vec![FileType::ImageJPEG],
                 },
             )
             .build();
 
-        let file = guards.check("test", FILE_NAME, buf, CONTENT_TYPE);
+        let file = guards.check(Prefix::ServerBanner.as_str(), FILE_NAME, buf, CONTENT_TYPE);
         insta::assert_debug_snapshot!(file);
     }
 
@@ -215,14 +213,14 @@ mod tests {
 
         let guards = GuardsBuilder::new()
             .add(
-                "test",
+                Prefix::ServerBanner,
                 Guard {
                     allowed_file_types: vec![FileType::Any],
                 },
             )
             .build();
 
-        let file = guards.check("test", FILE_NAME, buf, CONTENT_TYPE);
+        let file = guards.check(Prefix::ServerBanner.as_str(), FILE_NAME, buf, CONTENT_TYPE);
         insta::assert_debug_snapshot!(file);
     }
 
@@ -234,7 +232,7 @@ mod tests {
 
         let guards = GuardsBuilder::new()
             .add(
-                "test",
+                Prefix::ServerBanner,
                 Guard {
                     allowed_file_types: vec![FileType::ImagePNG],
                 },

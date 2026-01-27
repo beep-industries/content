@@ -8,8 +8,8 @@ use crate::app::tests::TestAppState;
 use crate::{
     app::AppState,
     storage::handlers::{
-        get_object::get_object_handler, post_object::post_sign_url_handler,
-        put_object::put_object_handler,
+        get_object::get_object_handler, get_public_object::get_public_object_handler,
+        post_object::post_sign_url_handler, put_object::put_object_handler,
     },
 };
 
@@ -18,6 +18,10 @@ pub fn storage_router(app_state: AppState) -> Router {
         .route("/{prefix}/{file_name}", put(put_object_handler))
         .route("/{prefix}/{file_name}", post(post_sign_url_handler))
         .route("/{prefix}/{file_name}", get(get_object_handler))
+        .route(
+            "/public/{prefix}/{file_name}",
+            get(get_public_object_handler),
+        )
         .with_state(app_state)
 }
 
@@ -44,6 +48,7 @@ mod tests {
         app::MockAppStateOperations,
         config::Config,
         guards::{FileType, Guard, GuardsBuilder},
+        prefixes::Prefix,
         signed_url::{extractor::Claims, service::AvailableActions},
         storage::handlers::post_object::SignUrlRequest,
     };
@@ -62,14 +67,17 @@ mod tests {
 
         operations.expect_guards().returning(|| {
             let guards = GuardsBuilder::new()
-                .add("test-bucket", Guard::new(vec![FileType::Any]))
+                .add(Prefix::ServerBanner, Guard::new(vec![FileType::Any]))
                 .build();
             Arc::new(guards)
         });
 
         operations.expect_verify_parts().returning(|_| {
             Ok(Claims {
-                path: ("test-bucket".to_string(), "index.html".to_string()),
+                path: (
+                    Prefix::ServerBanner.as_str().to_string(),
+                    "index.html".to_string(),
+                ),
                 action: AvailableActions::Put,
             })
         });
