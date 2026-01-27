@@ -91,7 +91,7 @@ affinity: {}
 # Application configuration
 config:
   port: "3000"
-  origins: "*"
+  origins: "http://app.beep.ovh,https://app.beep.ovh"
   s3Endpoint: "http://garage:3900"
   s3Bucket: "beep"
   baseUrl: "http://content.beep.local"
