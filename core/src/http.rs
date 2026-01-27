@@ -19,6 +19,9 @@ pub async fn serve(app: Router, config: Arc<Config>) -> Result<(), CoreError> {
 }
 
 pub fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
+    if origins.contains(&"*".to_string()) {
+        return Ok(CorsLayer::permissive());
+    }
     let origins = origins
         .iter()
         .map(|origin| {
