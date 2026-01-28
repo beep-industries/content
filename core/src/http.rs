@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
-    http::{HeaderValue, Method},
+    http::{HeaderValue, Method, header},
 };
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
@@ -38,6 +38,12 @@ pub fn default_cors_layer(origins: &[String]) -> Result<CorsLayer, CoreError> {
             Method::PUT,
             Method::DELETE,
             Method::OPTIONS,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            header::ORIGIN,
         ])
         .allow_origin(origins))
 }
