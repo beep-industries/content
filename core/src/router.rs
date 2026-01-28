@@ -20,10 +20,10 @@ pub async fn app(app_state: AppState) -> Result<Router, CoreError> {
     let openapi = ApiDoc::openapi();
 
     Ok(Router::new()
-        .layer(default_cors_layer(&config.origins)?)
         .merge(Scalar::with_url("/docs", openapi.clone()))
         .merge(healthcheck_router(app_state.clone()))
         .merge(storage_router(app_state.clone()))
+        .layer(default_cors_layer(&config.origins)?)
         .layer(TraceLayer::new_for_http()))
 }
 
